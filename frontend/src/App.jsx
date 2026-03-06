@@ -1,10 +1,13 @@
-function App()
-{
-	return (
-		<>
-			<h1>Ludo time</h1>
-		</> 
-	);
-}
+import Header from './Header/Header.jsx'
+import Footer from './Footer/Footer.jsx'
+import Content from './Content/Content.jsx'
 
-export default App;
+const App = () => (
+  <>
+    <Header />
+    <Content />
+    <Footer />
+  </>
+)
+
+export default App

@@ -1,0 +1,12 @@
+.header-container {
+  display: flex;
+  background: rgb(130, 177, 216);
+  height: 6vh;
+  width: 100%;
+  text-align: center;
+  justify-content: space-between;
+  padding: 1rem;
+  svg {
+    fill: black;
+  }
+}
