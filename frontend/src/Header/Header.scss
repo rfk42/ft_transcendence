@@ -1,12 +1,21 @@
+@import '../colors';
+
 .header-container {
   display: flex;
-  background: rgb(130, 177, 216);
-  height: 6vh;
+  background: $white;
   width: 100%;
   text-align: center;
   justify-content: space-between;
-  padding: 1rem;
+  padding: 0.4rem 1rem;
+  border-bottom: 0.2rem solid;
   svg {
     fill: black;
+    cursor: pointer;
+  }
+
+  .header-left,
+  .header-right {
+    display: flex;
+    align-items: center;
   }
 }

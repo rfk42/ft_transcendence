@@ -1,6 +1,8 @@
+@import '../colors';
+
 .footer-container {
   display: flex;
-  background: rgb(113, 231, 152);
-  height: 16vh;
+  background: $white;
+  height: 10rem;
   width: 100%;
 }

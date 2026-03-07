@@ -7,20 +7,12 @@ import './Header.scss'
 const Header = () => (
   <header className="header-container">
     <div className="header-left">
-      <button className="burger">
-        <MenuIcon />
-      </button>
+      <MenuIcon />
     </div>
     <div className="header-right">
-      <button className="account">
-        <AccountIcon />
-      </button>
-      <button className="login">
-        <LoginIcon />
-      </button>
-      <button className="logout">
-        <LogoutIcon />
-      </button>
+      <AccountIcon />
+      <LoginIcon />
+      <LogoutIcon />
     </div>
   </header>
 )
