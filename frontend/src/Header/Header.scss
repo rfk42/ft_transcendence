@@ -1,15 +1,15 @@
-@import '../colors';
+@use '../colors';
 
 .header-container {
   display: flex;
-  background: $white;
+  background: colors.$white;
   width: 100%;
   text-align: center;
   justify-content: space-between;
   padding: 0.4rem 1rem;
   border-bottom: 0.2rem solid;
   svg {
-    fill: black;
+    fill: colors.$black;
     cursor: pointer;
   }
 

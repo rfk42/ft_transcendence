@@ -1,4 +1,4 @@
-@import '../../colors';
+@use '../../colors';
 
 .game-board-container {
   display: flex;
@@ -6,7 +6,7 @@
   height: 35rem;
   width: 35rem;
   background: rgba(255, 255, 255, 0.842);
-  border: solid 4px $black;
+  border: solid 4px colors.$black;
   border-radius: 1rem;
   justify-content: center;
   transform: perspective(750px) translate3d(0px, 0px, -250px) rotateX(27deg)
@@ -21,6 +21,18 @@
     }
   }
 
+  .music_button {
+    position: absolute;
+    height: 2rem;
+    width: 1rem;
+    left: 0.2rem;
+    bottom: -0.2rem;
+    svg {
+      fill: colors.$black;
+      cursor: pointer;
+    }
+  }
+
   .game-board-top {
     display: flex;
     justify-content: center;
@@ -32,12 +44,12 @@
       justify-content: center;
       align-items: center;
       width: 32%;
-      background: $blue-A700;
+      background: colors.$blue-A700;
       &_home {
         display: flex;
         justify-content: center;
         flex-wrap: wrap;
-        background: $blue-900;
+        background: colors.$blue-900;
         border-radius: 0.7rem;
         width: 80%;
         height: 80%;
@@ -50,7 +62,7 @@
           height: 30%;
 
           border-radius: 5rem;
-          background: $blue-700;
+          background: colors.$blue-700;
         }
       }
     }
@@ -71,8 +83,8 @@
 
         @each $child in $child-red {
           &:nth-child(#{$child}) {
-            background: $red-A700;
-            border-color: $red-A700;
+            background: colors.$red-A700;
+            border-color: colors.$red-A700;
           }
         }
       }
@@ -82,12 +94,12 @@
       justify-content: center;
       align-items: center;
       width: 32%;
-      background: $red-A700;
+      background: colors.$red-A700;
       &_home {
         display: flex;
         justify-content: center;
         flex-wrap: wrap;
-        background: $red-900;
+        background: colors.$red-900;
         border-radius: 0.7rem;
         width: 80%;
         height: 80%;
@@ -100,7 +112,7 @@
           height: 30%;
 
           border-radius: 5rem;
-          background: $red-700;
+          background: colors.$red-700;
         }
       }
     }
@@ -129,8 +141,8 @@
 
         @each $child in $child-blue {
           &:nth-child(#{$child}) {
-            background: $blue-A700;
-            border-color: $blue-A700;
+            background: colors.$blue-A700;
+            border-color: colors.$blue-A700;
           }
         }
       }
@@ -150,19 +162,19 @@
 
         &:nth-child(1) {
           left: -70%;
-          background: $blue-A700;
+          background: colors.$blue-A700;
         }
         &:nth-child(2) {
           top: -70%;
-          background: $red-A700;
+          background: colors.$red-A700;
         }
         &:nth-child(3) {
           bottom: -70%;
-          background: $yellow-A700;
+          background: colors.$yellow-A700;
         }
         &:nth-child(4) {
           right: -70%;
-          background: $green-A700;
+          background: colors.$green-A700;
         }
       }
     }
@@ -184,8 +196,8 @@
 
         @each $child in $child-green {
           &:nth-child(#{$child}) {
-            background: $green-A700;
-            border-color: $green-A700;
+            background: colors.$green-A700;
+            border-color: colors.$green-A700;
           }
         }
       }
@@ -202,12 +214,12 @@
       justify-content: center;
       align-items: center;
       width: 32%;
-      background: $yellow-A700;
+      background: colors.$yellow-A700;
       &_home {
         display: flex;
         justify-content: center;
         flex-wrap: wrap;
-        background: $yellow-900;
+        background: colors.$yellow-900;
         border-radius: 0.7rem;
         width: 80%;
         height: 80%;
@@ -220,7 +232,7 @@
           height: 30%;
 
           border-radius: 5rem;
-          background: $yellow-700;
+          background: colors.$yellow-700;
         }
       }
     }
@@ -241,8 +253,8 @@
 
         @each $child in $child-yellow {
           &:nth-child(#{$child}) {
-            background: $yellow-A700;
-            border-color: $yellow-A700;
+            background: colors.$yellow-A700;
+            border-color: colors.$yellow-A700;
           }
         }
       }
@@ -252,12 +264,12 @@
       justify-content: center;
       align-items: center;
       width: 32%;
-      background: $green-A700;
+      background: colors.$green-A700;
       &_home {
         display: flex;
         justify-content: center;
         flex-wrap: wrap;
-        background: $green-900;
+        background: colors.$green-900;
         border-radius: 0.7rem;
         width: 80%;
         height: 80%;
@@ -269,7 +281,7 @@
           width: 30%;
           height: 30%;
           border-radius: 5rem;
-          background: $green-700;
+          background: colors.$green-700;
 
           svg {
             transition: transform 100ms ease-in;

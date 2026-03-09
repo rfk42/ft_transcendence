@@ -1,9 +1,9 @@
-@import '../colors';
+@use '../colors';
 
 .footer-container {
   display: flex;
-  background: $white;
+  background: colors.$white;
   height: 10rem;
   width: 100%;
-  border-top: 3px solid $black;
+  border-top: 3px solid colors.$black;
 }

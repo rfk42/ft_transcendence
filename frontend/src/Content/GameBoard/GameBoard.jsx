@@ -1,6 +1,9 @@
 import './GameBoard.scss'
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import PawnIcon from '../../assets/icons/pawn.jsx'
+import MusicOffIcon from '../../assets/icons/MusicOffIcon.jsx'
+import MusicOnIcon from '../../assets/icons/MusicOnIcon.jsx'
+import music from '../../assets/sound/theme.mp3'
 
 const GameBoard = () => {
   const pawnRef = useRef(null)
@@ -15,6 +18,17 @@ const GameBoard = () => {
   const bottomRightRef = useRef()
   const squareArea = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
   const squaresRef = useRef([])
+  const audioRef = useRef(null)
+  const [playing, setPlaying] = useState(false)
+
+  const toggleMusic = () => {
+    if (playing) {
+      audioRef.current.pause()
+    } else {
+      audioRef.current.play()
+    }
+    setPlaying(!playing)
+  }
 
   useEffect(() => {
     console.log('Pos', topCenterRef.current.getBoundingClientRect())
@@ -92,6 +106,10 @@ const GameBoard = () => {
             <div className="base-circle"></div>
           </div>
         </div>
+        <audio ref={audioRef} src={music} loop />
+        <button onClick={toggleMusic} className="music_button">
+          {playing ? <MusicOnIcon /> : <MusicOffIcon />}
+        </button>
       </div>
     </section>
   )

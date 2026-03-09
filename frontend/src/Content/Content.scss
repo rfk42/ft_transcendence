@@ -1,4 +1,4 @@
-@import '/src/colors';
+@use '/src/colors';
 
 .content-container {
   background-size: cover;
@@ -15,7 +15,7 @@
     align-items: center;
     background: rgba(255, 255, 255, 0.781);
     border-radius: 5rem;
-    border: solid 2px $black;
+    border: solid 2px colors.$black;
     display: flex;
     height: 6rem;
     justify-content: center;
