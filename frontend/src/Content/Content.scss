@@ -1,21 +1,24 @@
+@import '/src/colors';
+
 .content-container {
   background-size: cover;
   background-image: url(../assets/wallpaperLudo.jpg);
-  background-color: rgba(255, 255, 255, 0.726);
+  background-color: rgba(255, 255, 255, 0);
   background-blend-mode: overlay;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 48rem;
+  height: 57rem;
   width: 100%;
 
   .toto-button {
     align-items: center;
-    background: rgb(80, 80, 255);
-    border-radius: 2rem;
+    background: rgba(255, 255, 255, 0.781);
+    border-radius: 5rem;
+    border: solid 2px $black;
     display: flex;
-    height: 4rem;
+    height: 6rem;
     justify-content: center;
-    width: 20rem;
+    width: 25rem;
   }
 }

@@ -5,10 +5,21 @@
   flex-direction: column;
   height: 35rem;
   width: 35rem;
-  background: rgba(255, 255, 255, 0.637);
-  border: solid 4px rgba(0, 0, 0, 0.678);
+  background: rgba(255, 255, 255, 0.842);
+  border: solid 4px $black;
   border-radius: 1rem;
   justify-content: center;
+  transform: perspective(750px) translate3d(0px, 0px, -250px) rotateX(27deg)
+    scale(0.7);
+  box-shadow: 0 70px 40px -20px rgba(0, 0, 0, 0.363);
+  animation: boardEnter 0.9s ease-in forwards;
+
+  @keyframes boardEnter {
+    to {
+      transform: perspective(750px) translate3d(0px, 0px, 0px) rotateX(0deg)
+        scale(1);
+    }
+  }
 
   .game-board-top {
     display: flex;
