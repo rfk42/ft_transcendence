@@ -23,8 +23,8 @@ for i in {1..120}; do
 done
 
 echo "Runtime checks through Nginx:"
-curl -kfsS https://localhost/ >/dev/null && echo "✅ Front OK" || (echo "❌ Front FAIL" && exit 1)
-curl -kfsS https://localhost/api/ping >/dev/null && echo "✅ API OK" || (echo "❌ API FAIL" && exit 1)
+curl -kfsS https://localhost:8443/ >/dev/null && echo "✅ Front OK" || (echo "❌ Front FAIL" && exit 1)
+curl -kfsS https://localhost:8443/api/ping >/dev/null && echo "✅ API OK" || (echo "❌ API FAIL" && exit 1)
 
 docker compose ps
 echo "✅ Everything UP and working"

@@ -1,13 +1,11 @@
-version: "3.8"
-
 services:
   nginx:
     container_name: nginx
     build: ./nginx
     image: nginx:rhamini
     ports:
-      - "443:443"
-      - "80:80"
+      - "8443:443"
+      - "8080:80"
     depends_on:
       backend:
         condition: service_healthy
@@ -31,6 +29,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
     volumes:
       - postgresql:/var/lib/postgresql/data
     networks:
@@ -51,7 +51,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql://ludo_user:supersecret@postgres:5432/ludo
       JWT_SECRET: ${JWT_SECRET}
       UPLOAD_DIR: /app/uploads
     volumes:
