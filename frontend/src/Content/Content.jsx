@@ -1,22 +1,23 @@
-import GameBoard from './GameBoard/GameBoard.jsx'
+﻿import GameBoard from './GameBoard/GameBoard.jsx'
+import AuthForm from './Auth/AuthForm.jsx'
 import './Content.scss'
-import { BrowserRouter, Routes, Route, Link } from 'react-router'
+import { Link, Route, Routes } from 'react-router'
 
 const Content = () => (
   <section className="content-container">
-    <BrowserRouter>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <Link to="/play">
-              <div className="toto-button">PLAY</div>
-            </Link>
-          }
-        />
-        <Route path="/play" element={<GameBoard />} />
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route
+        path="/"
+        element={
+          <Link to="/play" className="content-link">
+            <div className="toto-button">PLAY</div>
+          </Link>
+        }
+      />
+      <Route path="/play" element={<GameBoard />} />
+      <Route path="/login" element={<AuthForm mode="login" />} />
+      <Route path="/register" element={<AuthForm mode="register" />} />
+    </Routes>
   </section>
 )
 

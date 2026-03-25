@@ -1,0 +1,77 @@
+﻿@use '/src/colors';
+
+.auth-card-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.auth-card {
+  width: min(28rem, 100%);
+  padding: 2rem;
+  border: solid 2px colors.$black;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.9);
+
+  h1 {
+    margin: 0 0 0.5rem;
+  }
+}
+
+.auth-eyebrow {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-subtitle {
+  margin: 0 0 1.4rem;
+}
+
+.auth-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.auth-field {
+  display: grid;
+  gap: 0.45rem;
+  font-weight: 700;
+
+  input {
+    width: 100%;
+    padding: 0.9rem 1rem;
+    border: solid 2px rgba(0, 0, 0, 0.18);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    font: inherit;
+
+    &:focus {
+      outline: none;
+      border-color: colors.$black;
+    }
+  }
+}
+
+.auth-submit {
+  border: solid 2px colors.$black;
+  border-radius: 5rem;
+  background: rgba(255, 255, 255, 0.9);
+  color: colors.$black;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 0.9rem 1rem;
+}
+
+.auth-switch {
+  margin: 1rem 0 0;
+
+  a {
+    color: inherit;
+    font-weight: 700;
+  }
+}

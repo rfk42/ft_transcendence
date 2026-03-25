@@ -1,21 +1,44 @@
-@use '../colors';
+﻿@use '../colors';
 
 .header-container {
   display: flex;
-  background: colors.$white;
-  width: 100%;
-  text-align: center;
+  align-items: center;
   justify-content: space-between;
+  width: 100%;
   padding: 0.4rem 1rem;
-  border-bottom: 0.2rem solid;
-  svg {
-    fill: colors.$black;
-    cursor: pointer;
-  }
+  background: colors.$white;
+  border-bottom: 0.2rem solid colors.$black;
 
   .header-left,
   .header-right {
     display: flex;
     align-items: center;
+    gap: 0.4rem;
+  }
+
+  .header-link,
+  .header-icon-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    cursor: pointer;
+    transition: background 140ms ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    svg {
+      fill: colors.$black;
+    }
+  }
+
+  .header-link {
+    text-decoration: none;
   }
 }

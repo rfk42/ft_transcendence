@@ -1,24 +1,32 @@
-@use '/src/colors';
+﻿@use '/src/colors';
 
 .content-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 57rem;
+  width: 100%;
+  padding: 2rem 1rem;
   background-size: cover;
   background-image: url(../assets/wallpaperLudo.jpg);
   background-color: rgba(255, 255, 255, 0);
   background-blend-mode: overlay;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 57rem;
-  width: 100%;
+
+  .content-link {
+    text-decoration: none;
+    color: inherit;
+  }
 
   .toto-button {
-    align-items: center;
-    background: rgba(255, 255, 255, 0.781);
-    border-radius: 5rem;
-    border: solid 2px colors.$black;
     display: flex;
-    height: 6rem;
     justify-content: center;
+    align-items: center;
     width: 25rem;
+    height: 6rem;
+    border: solid 2px colors.$black;
+    border-radius: 5rem;
+    background: rgba(255, 255, 255, 0.781);
+    font-size: 1.5rem;
+    font-weight: 700;
   }
 }
