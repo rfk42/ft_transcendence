@@ -1,0 +1,91 @@
+// Dis à Prisma qu'on utilise PostgreSQL
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Génère automatiquement le client JavaScript
+generator client {
+  provider = "prisma-client-js"
+}
+
+// TABLE USERS
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  username       String    @unique
+  passwordHash   String
+  avatarUrl      String?   // le ? veut dire : optionnel (peut être null)
+  twofaEnabled   Boolean   @default(false)
+  twofaSecret    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  sentRequests     Friend[]    @relation("SentRequests")
+  receivedRequests Friend[]    @relation("ReceivedRequests")
+  gamePlayers      GamePlayer[]
+}
+
+// TABLE FRIENDS
+model Friend {
+  id        String   @id @default(uuid())
+  status    String   @default("pending") // pending / accepted / blocked
+
+  // Qui envoie la demande
+  userId    String
+  user      User     @relation("SentRequests", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Qui reçoit la demande
+  friendId  String
+  friend    User     @relation("ReceivedRequests", fields: [friendId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, friendId]) // on ne peut pas avoir deux fois la même paire
+}
+
+// TABLE GAMES (une partie de Ludo)
+model Game {
+  id          String   @id @default(uuid())
+  status      String   @default("waiting") // waiting / playing / finished
+  winnerId    String?  // null tant que la partie n'est pas finie
+  createdAt   DateTime @default(now())
+  finishedAt  DateTime?
+
+  // Relations
+  players     GamePlayer[]
+  moves       GameMove[]
+}
+
+// TABLE GAME_PLAYERS (qui joue dans quelle partie)
+model GamePlayer {
+  id       String @id @default(uuid())
+  color    String // "red" / "blue" / "green" / "yellow"
+  position Int    @default(0) // position sur le plateau
+
+  // Quel user
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Dans quelle partie
+  gameId   String
+  game     Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, userId])  // un user ne peut pas être deux fois dans la même partie
+  @@unique([gameId, color])   // deux joueurs ne peuvent pas avoir la même couleur
+}
+
+// TABLE GAME_MOVES (historique des coups)
+model GameMove {
+  id         String   @id @default(uuid())
+  diceValue  Int      // résultat du dé (1 à 6)
+  pieceIndex Int      // quelle pièce a bougé (0 à 3)
+  fromPos    Int      // position avant le coup
+  toPos      Int      // position après le coup
+  createdAt  DateTime @default(now())
+
+  // Dans quelle partie
+  gameId     String
+  game       Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+}
