@@ -1,0 +1,85 @@
+@use '/src/_colors.scss' as colors;
+
+.profile-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  padding: 2rem 1rem;
+  min-height: 100vh;
+}
+
+.profile-card {
+  width: min(45rem, 100%);
+  padding: 2rem;
+  border: solid 2px colors.$black;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.9);
+
+  h1 {
+    margin: 0 0 2rem;
+    font-size: 1.8rem;
+  }
+
+  h2 {
+    margin: 0 0 1rem;
+    font-size: 1.1rem;
+    border-bottom: 2px solid colors.$black;
+    padding-bottom: 0.5rem;
+  }
+}
+
+.profile-info {
+  display: grid;
+  gap: 2rem;
+}
+
+.profile-section {
+  display: grid;
+  gap: 1rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+}
+
+.stat-card {
+  display: grid;
+  place-items: center;
+  padding: 1.5rem 1rem;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-radius: 1rem;
+  background: rgba(0, 0, 0, 0.03);
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: colors.$black;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.game-history {
+  padding: 1rem;
+  border: 2px dashed rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.02);
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.5);
+  font-style: italic;
+}

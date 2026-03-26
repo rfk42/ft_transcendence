@@ -16,7 +16,6 @@
     gap: 0.4rem;
   }
 
-  .header-link,
   .header-icon-button {
     display: flex;
     align-items: center;
@@ -38,7 +37,25 @@
     }
   }
 
-  .header-link {
+  .header-text-button {
+    padding: 0.6rem 1rem;
+    border: 2px solid colors.$black;
+    border-radius: 0.4rem;
+    background: transparent;
+    color: colors.$black;
+    font-weight: 700;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 140ms ease;
     text-decoration: none;
+    display: inline-block;
+    text-align: center;
+
+    &:hover {
+      background: colors.$black;
+      color: colors.$white;
+    }
   }
 }
+
+
