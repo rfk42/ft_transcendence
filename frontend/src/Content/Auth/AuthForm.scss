@@ -65,6 +65,27 @@
   font: inherit;
   font-weight: 700;
   padding: 0.9rem 1rem;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: colors.$black;
+    color: white;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.auth-error {
+  padding: 0.9rem 1rem;
+  margin-bottom: 1rem;
+  background: #fee;
+  border: solid 2px #f44;
+  border-radius: 1rem;
+  color: #c00;
+  font-weight: 700;
 }
 
 .auth-switch {

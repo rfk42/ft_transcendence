@@ -1,5 +1,7 @@
 ﻿import GameBoard from './GameBoard/GameBoard.jsx'
 import AuthForm from './Auth/AuthForm.jsx'
+import Profile from './Profile/Profile.jsx'
+import ProtectedRoute from '../components/ProtectedRoute.jsx'
 import './Content.scss'
 import { Link, Route, Routes } from 'react-router'
 
@@ -17,6 +19,14 @@ const Content = () => (
       <Route path="/play" element={<GameBoard />} />
       <Route path="/login" element={<AuthForm mode="login" />} />
       <Route path="/register" element={<AuthForm mode="register" />} />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   </section>
 )
