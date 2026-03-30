@@ -1,23 +1,23 @@
-const jwt = require("jsonwebtoken");
+const jwt = require("jsonwebtoken")
 
 /**
  * Middleware qui vérifie le token JWT dans le header Authorization.
  * Attache req.userId si le token est valide.
  */
 const authenticate = (req, res, next) => {
-  const header = req.headers.authorization;
+  const header = req.headers.authorization
   if (!header || !header.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Token manquant" });
+    return res.status(401).json({ error: "Token manquant" })
   }
 
-  const token = header.split(" ")[1];
+  const token = header.split(" ")[1]
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = payload.userId;
-    next();
+    const payload = jwt.verify(token, process.env.JWT_SECRET)
+    req.userId = payload.userId
+    next()
   } catch (err) {
-    return res.status(401).json({ error: "Token invalide ou expiré" });
+    return res.status(401).json({ error: "Token invalide ou expiré" })
   }
-};
+}
 
-module.exports = authenticate;
+module.exports = authenticate
