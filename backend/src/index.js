@@ -14,5 +14,5 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`Backend listening on ${PORT}`);
 });
 
-const authRoutes = require("./routes/auth")
-app.use("/auth", authRoutes)
+const authRoutes = require("./routes/auth");
+app.use("/auth", authRoutes);
