@@ -13,10 +13,10 @@ const AUTH_CONTENT = {
     switchTo: '/register',
     fields: [
       {
-        id: 'email',
-        label: 'Email',
-        type: 'email',
-        placeholder: 'player@ludo.gg',
+        id: 'username',
+        label: "Nom d'utilisateur",
+        type: 'text',
+        placeholder: 'KingLudo',
       },
       {
         id: 'password',
@@ -108,7 +108,7 @@ const AuthForm = ({ mode = 'login' }) => {
 
       // Préparation des données selon le mode
       const payload = mode === 'login'
-        ? { email: formData.email, password: formData.password }
+        ? { username: formData.username, password: formData.password }
         : { email: formData.email, password: formData.password, username: formData.username }
 
       // Appel à l'API

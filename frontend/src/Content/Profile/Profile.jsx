@@ -10,10 +10,11 @@ const Profile = () => {
     <section className="profile-container">
       <div className="profile-card">
         <h1>{username}</h1>
-
+    
         <div className="profile-info">
           <div className="profile-section">
             <h2>Statistiques</h2>
+            
             <div className="stats-grid">
               <div className="stat-card">
                 <div className="stat-value">0</div>

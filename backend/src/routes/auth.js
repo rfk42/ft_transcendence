@@ -22,9 +22,8 @@ function validateRegister({ email, username, password }) {
   return null
 }
 
-function validateLogin({ email, password }) {
-  if (!email || !password) return "Email et mot de passe requis"
-  if (!EMAIL_RE.test(email)) return "Format d'email invalide"
+function validateLogin({ username, password }) {
+  if (!username || !password) return "Nom d'utilisateur et mot de passe requis"
   return null
 }
 
@@ -56,17 +55,17 @@ router.post("/register", async (req, res) => {
 })
 
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body
+  const { username, password } = req.body
 
-  const validationError = validateLogin({ email, password })
+  const validationError = validateLogin({ username, password })
   if (validationError) return res.status(400).json({ error: validationError })
 
   try {
-    const user = await prisma.user.findUnique({ where: { email } })
-    if (!user) return res.status(401).json({ error: "Email ou mot de passe incorrect" })
+    const user = await prisma.user.findUnique({ where: { username } })
+    if (!user) return res.status(401).json({ error: "Nom d'utilisateur ou mot de passe incorrect" })
 
     const valid = await bcrypt.compare(password, user.passwordHash)
-    if (!valid) return res.status(401).json({ error: "Email ou mot de passe incorrect" })
+    if (!valid) return res.status(401).json({ error: "Nom d'utilisateur ou mot de passe incorrect" })
 
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "7d" })
     res.json({ token, user: sanitizeUser(user) })
