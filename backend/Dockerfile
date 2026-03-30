@@ -12,5 +12,5 @@ ENV NODE_ENV=development
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
-EXPOSE 3000
-CMD npx prisma db push --skip-generate && npm run dev
+EXPOSE 3000 5555
+CMD npx prisma db push --skip-generate && npx prisma studio --port 5555 --hostname 0.0.0.0 & npm run dev
