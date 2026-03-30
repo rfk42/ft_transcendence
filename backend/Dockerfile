@@ -4,12 +4,12 @@ WORKDIR /app
 
 FROM base AS deps
 COPY package*.json ./
-COPY prisma ./prisma
 RUN npm ci
 
 FROM base AS dev
 ENV NODE_ENV=development
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN npx prisma generate
 EXPOSE 3000
-CMD ["npm", "run", "dev"]
+CMD npx prisma db push --skip-generate && npm run dev
