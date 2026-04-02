@@ -53,6 +53,12 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://ludo_user:supersecret@postgres:5432/ludo
       JWT_SECRET: ${JWT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-https://localhost:8443/api/auth/google/callback}
+      FT_CLIENT_ID: ${FT_CLIENT_ID}
+      FT_CLIENT_SECRET: ${FT_CLIENT_SECRET}
+      FT_REDIRECT_URI: ${FT_REDIRECT_URI:-https://localhost:8443/api/auth/42/callback}
       UPLOAD_DIR: /app/uploads
     volumes:
       - ./backend:/app

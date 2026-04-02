@@ -42,10 +42,14 @@ export const AuthProvider = ({ children }) => {
     setUser(null)
   }
 
+  const updateUser = (userData) => {
+    setUser((prev) => (prev ? { ...prev, ...userData } : prev))
+  }
+
   const isConnected = !loading && user !== null
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, isConnected }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser, isConnected }}>
       {children}
     </AuthContext.Provider>
   )

@@ -12,21 +12,119 @@
 .profile-card {
   width: min(45rem, 100%);
   padding: 2rem;
-  border: solid 2px colors.$black;
+  border: solid 2px rgba(255, 255, 255, 0.1);
   border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.9);
+  background: #1a1a2e;
+  color: #e0e0e0;
 
   h1 {
-    margin: 0 0 2rem;
+    margin: 0;
     font-size: 1.8rem;
+    color: #fff;
   }
 
   h2 {
     margin: 0 0 1rem;
     font-size: 1.1rem;
-    border-bottom: 2px solid colors.$black;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.15);
     padding-bottom: 0.5rem;
+    color: #fff;
   }
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+.profile-avatar {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.profile-username-area {
+  flex: 1;
+}
+
+.profile-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.profile-edit-input {
+  padding: 0.5rem 0.8rem;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.5rem;
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 700;
+  width: 14rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e0e0e0;
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+  }
+}
+
+.profile-edit-btn,
+.profile-save-btn,
+.profile-cancel-btn {
+  padding: 0.4rem 0.9rem;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: #a0a0b8;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 150ms ease;
+
+  &:hover:not(:disabled) {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.profile-edit-btn {
+  border-color: #3b82f6;
+  color: #3b82f6;
+
+  &:hover:not(:disabled) {
+    background: #3b82f6;
+    color: #fff;
+  }
+}
+
+.profile-save-btn {
+  border-color: #3b82f6;
+  color: #3b82f6;
+
+  &:hover:not(:disabled) {
+    background: #3b82f6;
+    color: #fff;
+  }
+}
+
+.profile-error {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f77;
 }
 
 .profile-info {
@@ -49,29 +147,29 @@
   display: grid;
   place-items: center;
   padding: 1.5rem 1rem;
-  border: 2px solid rgba(0, 0, 0, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.1);
   border-radius: 1rem;
-  background: rgba(0, 0, 0, 0.03);
+  background: rgba(255, 255, 255, 0.05);
   text-align: center;
 }
 
 .stat-value {
   font-size: 1.8rem;
   font-weight: 700;
-  color: colors.$black;
+  color: #fff;
   margin-bottom: 0.5rem;
 }
 
 .stat-label {
   font-size: 0.85rem;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .game-history {
   padding: 1rem;
-  border: 2px dashed rgba(0, 0, 0, 0.1);
+  border: 2px dashed rgba(255, 255, 255, 0.1);
   border-radius: 0.5rem;
-  background: rgba(0, 0, 0, 0.02);
+  background: rgba(255, 255, 255, 0.03);
   min-height: 100px;
   display: flex;
   align-items: center;
@@ -80,6 +178,6 @@
 
 .empty-state {
   margin: 0;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.4);
   font-style: italic;
 }

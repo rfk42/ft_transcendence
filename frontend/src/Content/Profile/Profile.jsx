@@ -1,15 +1,93 @@
+import { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import './Profile.scss'
 
 const Profile = () => {
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
+
+  const [editing, setEditing] = useState(false)
+  const [newUsername, setNewUsername] = useState(user?.username || '')
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const username = user?.username || 'Utilisateur'
+
+  const handleSave = async () => {
+    const trimmed = newUsername.trim()
+    if (trimmed === user?.username) {
+      setEditing(false)
+      return
+    }
+    if (trimmed.length < 3 || trimmed.length > 24) {
+      setError('Le pseudo doit faire entre 3 et 24 caractères')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+    try {
+      const res = await fetch('/api/auth/me', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ username: trimmed }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Erreur lors de la mise à jour')
+        return
+      }
+      updateUser(data.user)
+      setEditing(false)
+    } catch {
+      setError('Erreur de connexion')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCancel = () => {
+    setNewUsername(user?.username || '')
+    setError('')
+    setEditing(false)
+  }
 
   return (
     <section className="profile-container">
       <div className="profile-card">
-        <h1>{username}</h1>
+        <div className="profile-header">
+          {user?.avatarUrl && (
+            <img src={user.avatarUrl} alt="" className="profile-avatar" referrerPolicy="no-referrer" />
+          )}
+          <div className="profile-username-area">
+            {editing ? (
+              <div className="profile-edit-row">
+                <input
+                  className="profile-edit-input"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSave() }}
+                  disabled={saving}
+                  maxLength={24}
+                  autoFocus
+                />
+                <button className="profile-cancel-btn" onClick={handleCancel} disabled={saving}>
+                  Annuler
+                </button>
+              </div>
+            ) : (
+              <div className="profile-edit-row">
+                <h1>{username}</h1>
+                <button className="profile-edit-btn" onClick={() => setEditing(true)}>
+                  Modifier
+                </button>
+              </div>
+            )}
+            {error && <p className="profile-error">{error}</p>}
+          </div>
+        </div>
     
         <div className="profile-info">
           <div className="profile-section">

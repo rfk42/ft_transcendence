@@ -1,10 +1,9 @@
 ﻿import { Link, useNavigate } from 'react-router'
 import { useAuth } from '../contexts/AuthContext'
-import MenuIcon from '../assets/icons/menu.jsx'
 import './Header.scss'
 
 const Header = () => {
-  const { isConnected, loading, logout } = useAuth()
+  const { user, isConnected, loading, logout } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -15,39 +14,36 @@ const Header = () => {
   return (
     <header className="header-container">
       <div className="header-left">
-        <button
-          type="button"
-          className="header-icon-button"
-          aria-label="Open menu"
-        >
-          <MenuIcon />
-        </button>
+        <Link to="/" className="header-logo">Ludo Time</Link>
+        <nav className="header-nav">
+          <Link to="/play" className="header-nav-link">Play</Link>
+        </nav>
       </div>
 
       <div className="header-right">
         {loading ? null : isConnected ? (
           <>
-            <Link to="/profile" className="header-text-button" aria-label="Profile">
-              PROFIL
+            <Link to="/profile" className="header-profile-link" aria-label="Profile">
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt="" className="header-avatar" referrerPolicy="no-referrer" />
+              ) : (
+                <span className="header-avatar-placeholder">{user?.username?.[0]?.toUpperCase()}</span>
+              )}
+              <span className="header-username">{user?.username}</span>
             </Link>
             <button
               type="button"
-              className="header-text-button"
+              className="header-logout-btn"
               aria-label="Logout"
               onClick={handleLogout}
             >
-              LOGOUT
+              Logout
             </button>
           </>
         ) : (
-          <>
-            <Link to="/login" className="header-text-button" aria-label="Login">
-              LOGIN
-            </Link>
-            <Link to="/register" className="header-text-button" aria-label="Sign up">
-              SIGN UP
-            </Link>
-          </>
+          <Link to="/login" className="header-login-btn" aria-label="Login">
+            Login
+          </Link>
         )}
       </div>
     </header>

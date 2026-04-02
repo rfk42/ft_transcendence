@@ -15,14 +15,17 @@ model User {
   id             String    @id @default(uuid())
   email          String    @unique
   username       String    @unique
-  passwordHash   String
+  passwordHash   String?
   
   // Infos de profil
   firstName      String?
   lastName       String?
   bio            String?   // Description courte du profil
+  avatarUrl      String?   // URL de la photo de profil
   
   // Authentification
+  googleId       String?   @unique  // OAuth Google
+  fortyTwoId     String?   @unique  // OAuth 42
   twofaEnabled   Boolean   @default(false)
   twofaSecret    String?
   
