@@ -1,4 +1,4 @@
-﻿import {
+import {
   CENTER_TARGETS,
   FINISH_PROGRESS,
   MAIN_TRACK_STEPS,
@@ -13,9 +13,9 @@ Object.values(TRACK_START_INDEX).forEach((index) => {
   SAFE_TARGETS.add(TRACK_SEQUENCE[index])
 })
 
-export const createInitialPawns = () =>
+export const createInitialPawns = (playerOrder = PLAYER_ORDER) =>
   Object.fromEntries(
-    PLAYER_ORDER.map((color) => [
+    playerOrder.map((color) => [
       color,
       Array.from({ length: 4 }, (_, index) => ({
         id: `${color}-${index}`,
@@ -26,12 +26,12 @@ export const createInitialPawns = () =>
     ]),
   )
 
-export const flattenPawns = (pawnsByPlayer) =>
-  PLAYER_ORDER.flatMap((color) => pawnsByPlayer[color])
+export const flattenPawns = (pawnsByPlayer, playerOrder = PLAYER_ORDER) =>
+  playerOrder.flatMap((color) => pawnsByPlayer[color] ?? [])
 
-export const getNextPlayer = (player) => {
-  const currentIndex = PLAYER_ORDER.indexOf(player)
-  return PLAYER_ORDER[(currentIndex + 1) % PLAYER_ORDER.length]
+export const getNextPlayer = (player, playerOrder = PLAYER_ORDER) => {
+  const currentIndex = playerOrder.indexOf(player)
+  return playerOrder[(currentIndex + 1) % playerOrder.length]
 }
 
 export const canMovePawn = (progress, steps) => {
@@ -47,11 +47,26 @@ export const canMovePawn = (progress, steps) => {
 }
 
 export const getMovablePawnIds = (pawnsByPlayer, player, steps) =>
-  pawnsByPlayer[player]
+  (pawnsByPlayer[player] ?? [])
     .filter((pawn) => canMovePawn(pawn.progress, steps))
     .map((pawn) => pawn.id)
 
-const sendOpponentsHome = (pawnsByPlayer, movedPawn) => {
+export const buildMovePath = (fromProgress, toProgress) => {
+  if (toProgress <= fromProgress) {
+    return []
+  }
+
+  return Array.from(
+    { length: toProgress - fromProgress },
+    (_, index) => fromProgress + index + 1,
+  )
+}
+
+const sendOpponentsHome = (
+  pawnsByPlayer,
+  movedPawn,
+  playerOrder = PLAYER_ORDER,
+) => {
   if (movedPawn.progress < 0 || movedPawn.progress >= MAIN_TRACK_STEPS) {
     return pawnsByPlayer
   }
@@ -63,7 +78,7 @@ const sendOpponentsHome = (pawnsByPlayer, movedPawn) => {
   }
 
   return Object.fromEntries(
-    PLAYER_ORDER.map((color) => [
+    playerOrder.map((color) => [
       color,
       pawnsByPlayer[color].map((pawn) => {
         if (color === movedPawn.color) {
@@ -82,11 +97,16 @@ const sendOpponentsHome = (pawnsByPlayer, movedPawn) => {
   )
 }
 
-export const applyPawnMove = (pawnsByPlayer, pawnId, steps) => {
+export const applyPawnMove = (
+  pawnsByPlayer,
+  pawnId,
+  steps,
+  playerOrder = PLAYER_ORDER,
+) => {
   let movedPawn = null
 
   const movedState = Object.fromEntries(
-    PLAYER_ORDER.map((color) => [
+    playerOrder.map((color) => [
       color,
       pawnsByPlayer[color].map((pawn) => {
         if (pawn.id !== pawnId) {
@@ -100,7 +120,7 @@ export const applyPawnMove = (pawnsByPlayer, pawnId, steps) => {
     ]),
   )
 
-  const nextState = sendOpponentsHome(movedState, movedPawn)
+  const nextState = sendOpponentsHome(movedState, movedPawn, playerOrder)
 
   return {
     pawns: nextState,

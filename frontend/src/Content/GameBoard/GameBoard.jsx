@@ -1,5 +1,5 @@
-﻿import './GameBoard.scss'
-import { useRef, useState } from 'react'
+import './GameBoard.scss'
+import { useEffect, useRef, useState } from 'react'
 import MusicOffIcon from '../../assets/icons/MusicOffIcon.jsx'
 import MusicOnIcon from '../../assets/icons/MusicOnIcon.jsx'
 import music from '../../assets/sound/theme.mp3'
@@ -12,6 +12,7 @@ import {
 } from './boardConfig.jsx'
 import {
   applyPawnMove,
+  buildMovePath,
   createInitialPawns,
   flattenPawns,
   getMovablePawnIds,
@@ -20,11 +21,46 @@ import {
 import { useBoardTargets } from './useBoardTargets.jsx'
 import { CenterTargets, PawnOverlay, TargetGroup } from './BoardParts.jsx'
 
-const INITIAL_PAWNS = createInitialPawns()
+const PLAYER_COUNT_OPTIONS = [2, 3, 4]
+const STEP_ANIMATION_MS = 170
+
+const getPlayersForCount = (count) => {
+  if (count === 2) {
+    return ['blue', 'green']
+  }
+
+  return PLAYER_ORDER.slice(0, count)
+}
+
+const clonePawnsByPlayer = (pawnsByPlayer, playerOrder) =>
+  Object.fromEntries(
+    playerOrder.map((color) => [
+      color,
+      pawnsByPlayer[color].map((pawn) => ({ ...pawn })),
+    ]),
+  )
+
+const updatePawnProgress = (pawnsByPlayer, pawnId, nextProgress, playerOrder) =>
+  Object.fromEntries(
+    playerOrder.map((color) => [
+      color,
+      pawnsByPlayer[color].map((pawn) =>
+        pawn.id === pawnId ? { ...pawn, progress: nextProgress } : pawn,
+      ),
+    ]),
+  )
+
+const wait = (duration) =>
+  new Promise((resolve) => {
+    window.setTimeout(resolve, duration)
+  })
 
 const GameBoard = () => {
   const audioRef = useRef(null)
+  const animationRunRef = useRef(0)
   const [playing, setPlaying] = useState(false)
+  const [boardReady, setBoardReady] = useState(false)
+  const [playerCount, setPlayerCount] = useState(4)
   const [currentPlayer, setCurrentPlayer] = useState('blue')
   const [lastRoll, setLastRoll] = useState(null)
   const [pendingRoll, setPendingRoll] = useState(null)
@@ -32,28 +68,96 @@ const GameBoard = () => {
   const [statusMessage, setStatusMessage] = useState(
     'Lance le de pour commencer la partie.',
   )
-  const [pawnsByPlayer, setPawnsByPlayer] = useState(INITIAL_PAWNS)
+  const [pawnsByPlayer, setPawnsByPlayer] = useState(() =>
+    createInitialPawns(PLAYER_ORDER),
+  )
+  const [animatedPawnsByPlayer, setAnimatedPawnsByPlayer] = useState(null)
+  const [animatingPawnId, setAnimatingPawnId] = useState(null)
 
-  const pawns = flattenPawns(pawnsByPlayer)
+  const activePlayers = getPlayersForCount(playerCount)
+  const visiblePawnsByPlayer = animatedPawnsByPlayer ?? pawnsByPlayer
+  const pawns = flattenPawns(visiblePawnsByPlayer, activePlayers)
   const movablePawnIds =
-    pendingRoll === null || winner
+    pendingRoll === null || winner || animatingPawnId || !boardReady
       ? []
       : getMovablePawnIds(pawnsByPlayer, currentPlayer, pendingRoll)
 
-  const finishedCount = pawnsByPlayer[currentPlayer].filter(
+  const finishedCount = (pawnsByPlayer[currentPlayer] ?? []).filter(
     (pawn) => pawn.progress === FINISH_PROGRESS,
   ).length
 
   const { boardRef, pawnPositions, registerTarget } = useBoardTargets(pawns)
 
-  const toggleMusic = () => {
-    if (playing) {
-      audioRef.current.pause()
-    } else {
-      audioRef.current.play()
+  useEffect(() => {
+    return () => {
+      animationRunRef.current += 1
+    }
+  }, [])
+
+  useEffect(() => {
+    const boardNode = boardRef.current
+
+    if (!boardNode) {
+      return undefined
     }
 
-    setPlaying(!playing)
+    const { animationDuration, animationName } =
+      window.getComputedStyle(boardNode)
+
+    if (animationName === 'none' || animationDuration === '0s') {
+      setBoardReady(true)
+      return undefined
+    }
+
+    const handleAnimationEnd = (event) => {
+      if (event.target === boardNode) {
+        setBoardReady(true)
+      }
+    }
+
+    boardNode.addEventListener('animationend', handleAnimationEnd)
+
+    return () => {
+      boardNode.removeEventListener('animationend', handleAnimationEnd)
+    }
+  }, [boardRef])
+
+  const toggleMusic = async () => {
+    if (!audioRef.current) {
+      return
+    }
+
+    if (playing) {
+      audioRef.current.pause()
+      setPlaying(false)
+      return
+    }
+
+    try {
+      await audioRef.current.play()
+      setPlaying(true)
+    } catch {
+      setPlaying(false)
+    }
+  }
+
+  const startNewGame = (nextPlayerCount = playerCount) => {
+    const nextPlayers = getPlayersForCount(nextPlayerCount)
+
+    animationRunRef.current += 1
+    setPlayerCount(nextPlayerCount)
+    setCurrentPlayer(nextPlayers[0])
+    setLastRoll(null)
+    setPendingRoll(null)
+    setWinner(null)
+    setAnimatingPawnId(null)
+    setAnimatedPawnsByPlayer(null)
+    setStatusMessage(
+      `Nouvelle partie a ${nextPlayerCount} joueur${
+        nextPlayerCount > 1 ? 's' : ''
+      }. ${PLAYER_LABELS[nextPlayers[0]]} commence.`,
+    )
+    setPawnsByPlayer(createInitialPawns(nextPlayers))
   }
 
   const finishTurn = ({ nextPlayer, message, keepPlayer = false }) => {
@@ -65,9 +169,62 @@ const GameBoard = () => {
     }
   }
 
-  const playPawn = (pawnId, roll) => {
-    const result = applyPawnMove(pawnsByPlayer, pawnId, roll)
+  const animatePawnMove = async (pawnId, path, result) => {
+    const runId = ++animationRunRef.current
+    let nextAnimatedState = clonePawnsByPlayer(pawnsByPlayer, activePlayers)
+
+    setPendingRoll(null)
+    setAnimatingPawnId(pawnId)
+    setAnimatedPawnsByPlayer(nextAnimatedState)
+
+    for (const progress of path) {
+      if (animationRunRef.current !== runId) {
+        return false
+      }
+
+      nextAnimatedState = updatePawnProgress(
+        nextAnimatedState,
+        pawnId,
+        progress,
+        activePlayers,
+      )
+      setAnimatedPawnsByPlayer(nextAnimatedState)
+      await wait(STEP_ANIMATION_MS)
+    }
+
+    if (animationRunRef.current !== runId) {
+      return false
+    }
+
+    setAnimatedPawnsByPlayer(result.pawns)
+    await wait(Math.round(STEP_ANIMATION_MS * 0.8))
+
+    if (animationRunRef.current !== runId) {
+      return false
+    }
+
     setPawnsByPlayer(result.pawns)
+    setAnimatedPawnsByPlayer(null)
+    setAnimatingPawnId(null)
+    return true
+  }
+
+  const playPawn = async (pawnId, roll) => {
+    const movingPawn = (pawnsByPlayer[currentPlayer] ?? []).find(
+      (pawn) => pawn.id === pawnId,
+    )
+
+    if (!movingPawn) {
+      return
+    }
+
+    const result = applyPawnMove(pawnsByPlayer, pawnId, roll, activePlayers)
+    const path = buildMovePath(movingPawn.progress, result.movedPawn.progress)
+    const animationCompleted = await animatePawnMove(pawnId, path, result)
+
+    if (!animationCompleted) {
+      return
+    }
 
     if (result.winner) {
       setWinner(result.winner)
@@ -85,7 +242,7 @@ const GameBoard = () => {
       return
     }
 
-    const nextPlayer = getNextPlayer(currentPlayer)
+    const nextPlayer = getNextPlayer(currentPlayer, activePlayers)
     finishTurn({
       nextPlayer,
       message: `Tour termine. ${PLAYER_LABELS[nextPlayer]} doit jouer.`,
@@ -93,7 +250,7 @@ const GameBoard = () => {
   }
 
   const handleRoll = () => {
-    if (winner || pendingRoll !== null) {
+    if (winner || pendingRoll !== null || animatingPawnId || !boardReady) {
       return
     }
 
@@ -107,7 +264,7 @@ const GameBoard = () => {
     setLastRoll(diceValue)
 
     if (nextMovable.length === 0) {
-      const nextPlayer = getNextPlayer(currentPlayer)
+      const nextPlayer = getNextPlayer(currentPlayer, activePlayers)
       setStatusMessage(
         `${PLAYER_LABELS[currentPlayer]} a fait ${diceValue}, mais aucun pion ne peut bouger.`,
       )
@@ -116,7 +273,7 @@ const GameBoard = () => {
     }
 
     if (nextMovable.length === 1) {
-      playPawn(nextMovable[0], diceValue)
+      void playPawn(nextMovable[0], diceValue)
       return
     }
 
@@ -127,20 +284,15 @@ const GameBoard = () => {
   }
 
   const handlePawnClick = (pawnId) => {
-    if (!movablePawnIds.includes(pawnId) || pendingRoll === null) {
+    if (
+      animatingPawnId ||
+      !movablePawnIds.includes(pawnId) ||
+      pendingRoll === null
+    ) {
       return
     }
 
-    playPawn(pawnId, pendingRoll)
-  }
-
-  const resetGame = () => {
-    setCurrentPlayer('blue')
-    setLastRoll(null)
-    setPendingRoll(null)
-    setWinner(null)
-    setStatusMessage('La partie a ete reinitialisee.')
-    setPawnsByPlayer(createInitialPawns())
+    void playPawn(pawnId, pendingRoll)
   }
 
   return (
@@ -222,18 +374,20 @@ const GameBoard = () => {
           </button>
         </div>
 
-        <PawnOverlay
-          pawns={pawns}
-          pawnPositions={pawnPositions}
-          currentPlayer={currentPlayer}
-          movablePawnIds={movablePawnIds}
-          onPawnClick={handlePawnClick}
-        />
+        {boardReady ? (
+          <PawnOverlay
+            pawns={pawns}
+            pawnPositions={pawnPositions}
+            currentPlayer={currentPlayer}
+            movablePawnIds={movablePawnIds}
+            onPawnClick={handlePawnClick}
+          />
+        ) : null}
       </div>
 
       <div className="game-board-controls">
         <div className="game-board-controls_row game-board-controls_row--players">
-          {PLAYER_ORDER.map((player) => (
+          {activePlayers.map((player) => (
             <div
               key={player}
               className={`turn-pill turn-pill--${player} ${
@@ -246,19 +400,43 @@ const GameBoard = () => {
         </div>
 
         <div className="game-board-controls_actions">
+          {PLAYER_COUNT_OPTIONS.map((count) => (
+            <button
+              key={count}
+              type="button"
+              onClick={() => startNewGame(count)}
+              disabled={playerCount === count && !winner && lastRoll === null}
+            >
+              {count} joueurs
+            </button>
+          ))}
+        </div>
+
+        <div className="game-board-controls_actions">
           <button
             type="button"
             onClick={handleRoll}
-            disabled={winner !== null || pendingRoll !== null}
+            disabled={
+              winner !== null ||
+              pendingRoll !== null ||
+              animatingPawnId !== null ||
+              !boardReady
+            }
           >
-            Lancer le de
+            {animatingPawnId ? 'Deplacement...' : 'Lancer le de'}
           </button>
-          <button type="button" onClick={resetGame}>
+          <button type="button" onClick={() => startNewGame(playerCount)}>
             Nouvelle partie
           </button>
         </div>
 
         <div className="game-board-status">
+          <p>
+            Joueurs actifs: <strong>{activePlayers.length}</strong>
+          </p>
+          <p>
+            Plateau pret: <strong>{boardReady ? 'Oui' : 'Non'}</strong>
+          </p>
           <p>
             Tour actif: <strong>{PLAYER_LABELS[currentPlayer]}</strong>
           </p>
@@ -267,6 +445,10 @@ const GameBoard = () => {
           </p>
           <p>
             Pion a choisir: <strong>{pendingRoll ? 'Oui' : 'Non'}</strong>
+          </p>
+          <p>
+            Animation en cours:{' '}
+            <strong>{animatingPawnId ? 'Oui' : 'Non'}</strong>
           </p>
           <p>
             Pions au centre: <strong>{finishedCount}/4</strong>

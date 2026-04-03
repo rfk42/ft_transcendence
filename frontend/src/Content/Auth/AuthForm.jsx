@@ -96,7 +96,7 @@ const AuthForm = ({ mode = 'login' }) => {
       // Validation pour register
       if (mode === 'register') {
         if (!formData.username) {
-          setError('Nom d\'utilisateur requis')
+          setError("Nom d'utilisateur requis")
           setLoading(false)
           return
         }
@@ -108,9 +108,14 @@ const AuthForm = ({ mode = 'login' }) => {
       }
 
       // Préparation des données selon le mode
-      const payload = mode === 'login'
-        ? { username: formData.username, password: formData.password }
-        : { email: formData.email, password: formData.password, username: formData.username }
+      const payload =
+        mode === 'login'
+          ? { username: formData.username, password: formData.password }
+          : {
+              email: formData.email,
+              password: formData.password,
+              username: formData.username,
+            }
 
       // Appel à l'API
       const endpoint = mode === 'login' ? '/auth/login' : '/auth/register'
