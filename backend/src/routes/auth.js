@@ -1,10 +1,40 @@
 const express = require("express")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
+const multer = require("multer")
+const path = require("path")
+const fs = require("fs")
 const prisma = require("../db")
 const authenticate = require("../middleware/auth")
 
 const router = express.Router()
+
+// ── Configuration Multer (upload avatar) ───────────────────
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "uploads")
+const AVATAR_DIR = path.join(UPLOAD_DIR, "avatars")
+
+// Crée le dossier avatars s'il n'existe pas
+fs.mkdirSync(AVATAR_DIR, { recursive: true })
+
+const avatarStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, AVATAR_DIR),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || ".jpg"
+    cb(null, `${req.userId}-${Date.now()}${ext}`)
+  },
+})
+
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 Mo max
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/webp"]
+    if (!allowed.includes(file.mimetype)) {
+      return cb(new Error("Format non supporté (jpeg, png, webp uniquement)"))
+    }
+    cb(null, true)
+  },
+})
 
 // ── Helpers de validation ──────────────────────────────────
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -280,6 +310,37 @@ router.patch("/me", authenticate, async (req, res) => {
       return res.status(409).json({ error: "Ce nom d'utilisateur est déjà pris" })
     res.status(500).json({ error: "Erreur serveur" })
   }
+})
+
+// ── POST /auth/me/avatar — upload de photo de profil ──
+router.post("/me/avatar", authenticate, (req, res) => {
+  avatarUpload.single("avatar")(req, res, async (err) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE")
+        return res.status(400).json({ error: "Fichier trop volumineux (5 Mo max)" })
+      return res.status(400).json({ error: err.message })
+    }
+    if (err) return res.status(400).json({ error: err.message })
+    if (!req.file) return res.status(400).json({ error: "Aucun fichier envoyé" })
+
+    try {
+      // Supprimer l'ancien avatar local s'il existe
+      const current = await prisma.user.findUnique({ where: { id: req.userId } })
+      if (current?.avatarUrl?.startsWith("/uploads/avatars/")) {
+        const oldPath = path.join(UPLOAD_DIR, current.avatarUrl.replace("/uploads/", ""))
+        fs.unlink(oldPath, () => {}) // suppression silencieuse
+      }
+
+      const avatarUrl = `/uploads/avatars/${req.file.filename}`
+      const user = await prisma.user.update({
+        where: { id: req.userId },
+        data: { avatarUrl },
+      })
+      res.json({ user: sanitizeUser(user) })
+    } catch {
+      res.status(500).json({ error: "Erreur serveur" })
+    }
+  })
 })
 
 module.exports = router

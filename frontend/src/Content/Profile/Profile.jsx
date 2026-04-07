@@ -14,6 +14,28 @@ const Profile = () => {
 
   const username = user?.username || 'Utilisateur'
 
+  const handleAvatarUpload = async (file) => {
+    if (!file) return
+    const formData = new FormData()
+    formData.append('avatar', file)
+
+    try {
+      const res = await fetch('/api/auth/me/avatar', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.token}` },
+        body: formData,
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Erreur lors de l'upload")
+        return
+      }
+      updateUser(data.user)
+    } catch {
+      setError("Erreur lors de l'upload")
+    }
+  }
+
   const handleSave = async () => {
     const trimmed = newUsername.trim()
     if (trimmed === user?.username) {
@@ -74,8 +96,8 @@ const Profile = () => {
               accept="image/jpeg,image/png,image/webp"
               onChange={(e) => {
                 const file = e.target.files[0]
-                if (file) console.log('Fichier sélectionné :', file.name)
-                // TODO: envoyer le fichier au backend
+                if (file) handleAvatarUpload(file)
+                e.target.value = '' // reset pour pouvoir re-sélectionner le même fichier
               }}
               hidden
             />
