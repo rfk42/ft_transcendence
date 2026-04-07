@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import EditIcon from '../../assets/icons/edit'
 import './Profile.scss'
 
 const Profile = () => {
   const { user, updateUser } = useAuth()
+  const fileInputRef = useRef(null)
 
   const [editing, setEditing] = useState(false)
   const [newUsername, setNewUsername] = useState(user?.username || '')
@@ -58,9 +60,26 @@ const Profile = () => {
     <section className="profile-container">
       <div className="profile-card">
         <div className="profile-header">
-          {user?.avatarUrl && (
-            <img src={user.avatarUrl} alt="" className="profile-avatar" referrerPolicy="no-referrer" />
-          )}
+          <div className="profile-avatar-wrapper" onClick={() => fileInputRef.current?.click()}>
+            <img
+              src={user?.avatarUrl || '/default-avatar.png'}
+              alt=""
+              className="profile-avatar"
+              referrerPolicy="no-referrer"
+            />
+            <span className="avatar-overlay"><EditIcon size={18} /></span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => {
+                const file = e.target.files[0]
+                if (file) console.log('Fichier sélectionné :', file.name)
+                // TODO: envoyer le fichier au backend
+              }}
+              hidden
+            />
+          </div>
           <div className="profile-username-area">
             {editing ? (
               <div className="profile-edit-row">
