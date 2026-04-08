@@ -15,4 +15,5 @@ RUN npx prisma generate
 EXPOSE 3000 5555
 # prisma generate : régénère le client au démarrage pour refléter les changements de schéma (ex: passwordHash optionnel pour OAuth)
 # --accept-data-loss : permet d'appliquer les migrations destructives en dev sans bloquer le démarrage
-CMD npx prisma generate && npx prisma db push --skip-generate --accept-data-loss && npx prisma studio --port 5555 --hostname 0.0.0.0 & npm run dev
+# Au démarrage : sync les dépendances, génère Prisma, pousse le schéma, lance Studio + le serveur
+CMD sh -c "npm ci --prefer-offline && npx prisma generate && npx prisma db push --skip-generate --accept-data-loss && (npx prisma studio --port 5555 --hostname 0.0.0.0 &) && npm run dev"
