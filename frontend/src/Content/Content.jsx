@@ -2,6 +2,7 @@
 import AuthForm from './Auth/AuthForm.jsx'
 import OAuthCallback from './Auth/OAuthCallback.jsx'
 import Profile from './Profile/Profile.jsx'
+import Leaderboard from './Leaderboard/Leaderboard.jsx'
 import ProtectedRoute from '../components/ProtectedRoute.jsx'
 import './Content.scss'
 import { Link, Route, Routes } from 'react-router'
@@ -29,6 +30,7 @@ const Content = () => (
           </ProtectedRoute>
         }
       />
+      <Route path="/leaderboard" element={<Leaderboard />} />
     </Routes>
   </section>
 )
