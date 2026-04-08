@@ -1,0 +1,233 @@
+@use '/src/_colors.scss' as colors;
+
+.leaderboard-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: 2rem 1rem;
+  min-height: 100vh;
+}
+
+.leaderboard-card {
+  width: min(50rem, 100%);
+  padding: 2rem;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.5rem;
+  background: #1a1a2e;
+  color: #e0e0e0;
+}
+
+.leaderboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+
+  h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    color: #fff;
+  }
+}
+
+.leaderboard-search input {
+  padding: 0.5rem 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e0e0e0;
+  font: inherit;
+  font-size: 0.9rem;
+  width: 14rem;
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+  }
+}
+
+// ── Podium ─────────────────────────────────────────────────
+
+.podium {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.podium-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  position: relative;
+}
+
+.podium-1 {
+  border-color: #c9a84c;
+  background: rgba(201, 168, 76, 0.08);
+}
+
+.podium-2 {
+  border-color: #8a8fa0;
+  background: rgba(138, 143, 160, 0.08);
+}
+
+.podium-3 {
+  border-color: #a0714f;
+  background: rgba(160, 113, 79, 0.08);
+}
+
+.podium-rank {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.podium-avatar {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.podium-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #fff;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.podium-wins {
+  font-size: 0.85rem;
+  color: #c9a84c;
+  font-weight: 600;
+}
+
+// ── Liste classement ───────────────────────────────────────
+
+.lb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.7rem 1rem;
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.03);
+  transition: background 150ms ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.07);
+  }
+}
+
+.lb-row-current {
+  background: rgba(59, 130, 246, 0.12);
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  margin-bottom: 0.8rem;
+
+  &:hover {
+    background: rgba(59, 130, 246, 0.18);
+  }
+}
+
+.lb-rank {
+  width: 2rem;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
+}
+
+.lb-avatar {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.avatar-placeholder {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.lb-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #fff;
+  min-width: 8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-bar-area {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.lb-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #c9a84c, #e0c068);
+  border-radius: 3px;
+  transition: width 300ms ease;
+}
+
+.lb-wins {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #c9a84c;
+  min-width: 2.5rem;
+  text-align: right;
+  flex-shrink: 0;
+}
