@@ -21,3 +21,6 @@ app.listen(PORT, "0.0.0.0", () => {
 
 const authRoutes = require("./routes/auth")
 app.use("/auth", authRoutes)
+
+const gameRoutes = require("./routes/game")
+app.use("/game", gameRoutes)

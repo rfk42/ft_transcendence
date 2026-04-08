@@ -1,5 +1,6 @@
 import './GameBoard.scss'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useAuth } from '../../contexts/AuthContext'
 import MusicOffIcon from '../../assets/icons/MusicOffIcon.jsx'
 import MusicOnIcon from '../../assets/icons/MusicOnIcon.jsx'
 import music from '../../assets/sound/theme.mp3'
@@ -56,6 +57,7 @@ const wait = (duration) =>
   })
 
 const GameBoard = () => {
+  const { user } = useAuth()
   const audioRef = useRef(null)
   const animationRunRef = useRef(0)
   const [playing, setPlaying] = useState(false)
@@ -73,6 +75,11 @@ const GameBoard = () => {
   )
   const [animatedPawnsByPlayer, setAnimatedPawnsByPlayer] = useState(null)
   const [animatingPawnId, setAnimatingPawnId] = useState(null)
+
+  // ─── Tracking pour les stats ──────────────────────────────
+  const [gameId, setGameId] = useState(null)
+  const [moveCount, setMoveCount] = useState(0)
+  const gameStartRef = useRef(null)
 
   const activePlayers = getPlayersForCount(playerCount)
   const visiblePawnsByPlayer = animatedPawnsByPlayer ?? pawnsByPlayer
@@ -141,7 +148,52 @@ const GameBoard = () => {
     }
   }
 
-  const startNewGame = (nextPlayerCount = playerCount) => {
+  // ─── Créer une partie en DB si connecté ───────────────────
+  const createGameInDB = useCallback(async (playerColor) => {
+    if (!user?.token) return null
+    try {
+      const res = await fetch('/api/game', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({ playerCount, playerColor }),
+      })
+      if (!res.ok) return null
+      const data = await res.json()
+      return data.game?.id || null
+    } catch {
+      return null
+    }
+  }, [user, playerCount])
+
+  // ─── Enregistrer la fin de partie en DB ───────────────────
+  const finishGameInDB = useCallback(async (gId, winnerColor, players) => {
+    if (!user?.token || !gId) return
+    try {
+      const duration = gameStartRef.current
+        ? Math.round((Date.now() - gameStartRef.current) / 1000)
+        : 0
+      await fetch(`/api/game/${gId}/finish`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          winnerColor,
+          players,
+          totalMoves: moveCount,
+          duration,
+        }),
+      })
+    } catch {
+      // silently fail
+    }
+  }, [user, moveCount])
+
+  const startNewGame = async (nextPlayerCount = playerCount) => {
     const nextPlayers = getPlayersForCount(nextPlayerCount)
 
     animationRunRef.current += 1
@@ -152,12 +204,18 @@ const GameBoard = () => {
     setWinner(null)
     setAnimatingPawnId(null)
     setAnimatedPawnsByPlayer(null)
+    setMoveCount(0)
+    gameStartRef.current = Date.now()
     setStatusMessage(
       `Nouvelle partie a ${nextPlayerCount} joueur${
         nextPlayerCount > 1 ? 's' : ''
       }. ${PLAYER_LABELS[nextPlayers[0]]} commence.`,
     )
     setPawnsByPlayer(createInitialPawns(nextPlayers))
+
+    // Créer la partie en DB (le user prend la première couleur)
+    const newGameId = await createGameInDB(nextPlayers[0])
+    setGameId(newGameId)
   }
 
   const finishTurn = ({ nextPlayer, message, keepPlayer = false }) => {
@@ -218,6 +276,8 @@ const GameBoard = () => {
       return
     }
 
+    setMoveCount((prev) => prev + 1)
+
     const result = applyPawnMove(pawnsByPlayer, pawnId, roll, activePlayers)
     const path = buildMovePath(movingPawn.progress, result.movedPawn.progress)
     const animationCompleted = await animatePawnMove(pawnId, path, result)
@@ -230,6 +290,13 @@ const GameBoard = () => {
       setWinner(result.winner)
       setPendingRoll(null)
       setStatusMessage(`${PLAYER_LABELS[result.winner]} gagne la partie.`)
+
+      // Enregistrer la fin de partie en DB
+      const playersData = activePlayers.map((color) => ({
+        color,
+        isWinner: color === result.winner,
+      }))
+      finishGameInDB(gameId, result.winner, playersData)
       return
     }
 

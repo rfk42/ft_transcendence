@@ -203,3 +203,62 @@
   color: rgba(255, 255, 255, 0.4);
   font-style: italic;
 }
+
+// ─── Historique des parties ──────────────────────────────
+.game-history {
+  .history-list {
+    display: grid;
+    gap: 0.75rem;
+    width: 100%;
+  }
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  transition: background 150ms ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  &--win {
+    border-left: 4px solid #22c55e;
+  }
+
+  &--loss {
+    border-left: 4px solid #ef4444;
+  }
+}
+
+.history-result {
+  font-weight: 700;
+  font-size: 0.9rem;
+  min-width: 6rem;
+  color: #fff;
+}
+
+.history-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.2rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+
+  span {
+    white-space: nowrap;
+  }
+}
+
+.history-color {
+  text-transform: capitalize;
+}
+
+.history-date {
+  margin-left: auto;
+}

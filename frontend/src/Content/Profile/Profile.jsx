@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import EditIcon from '../../assets/icons/edit'
 import './Profile.scss'
@@ -12,7 +12,45 @@ const Profile = () => {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
+  // Stats & historique
+  const [stats, setStats] = useState(null)
+  const [history, setHistory] = useState([])
+  const [loadingStats, setLoadingStats] = useState(true)
+
   const username = user?.username || 'Utilisateur'
+
+  // Charger stats et historique au montage
+  useEffect(() => {
+    if (!user?.token) return
+
+    const fetchStats = async () => {
+      try {
+        const [statsRes, historyRes] = await Promise.all([
+          fetch('/api/game/stats/me', {
+            headers: { Authorization: `Bearer ${user.token}` },
+          }),
+          fetch('/api/game/history', {
+            headers: { Authorization: `Bearer ${user.token}` },
+          }),
+        ])
+
+        if (statsRes.ok) {
+          const statsData = await statsRes.json()
+          setStats(statsData.stats)
+        }
+        if (historyRes.ok) {
+          const historyData = await historyRes.json()
+          setHistory(historyData.history)
+        }
+      } catch {
+        // silently fail
+      } finally {
+        setLoadingStats(false)
+      }
+    }
+
+    fetchStats()
+  }, [user?.token])
 
   const handleAvatarUpload = async (file) => {
     if (!file) return
@@ -134,26 +172,65 @@ const Profile = () => {
           <div className="profile-section">
             <h2>Statistiques</h2>
             
-            <div className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-value">0</div>
-                <div className="stat-label">Parties jouées</div>
+            {loadingStats ? (
+              <p className="empty-state">Chargement...</p>
+            ) : (
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <div className="stat-value">{stats?.totalGamesPlayed ?? 0}</div>
+                  <div className="stat-label">Parties jouées</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value">{stats?.gamesWon ?? 0}</div>
+                  <div className="stat-label">Victoires</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value">{stats?.winRate ? `${Math.round(stats.winRate)}%` : '0%'}</div>
+                  <div className="stat-label">Taux de victoire</div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-value">{stats?.totalMoves ?? 0}</div>
+                  <div className="stat-label">Coups joués</div>
+                </div>
               </div>
-              <div className="stat-card">
-                <div className="stat-value">0</div>
-                <div className="stat-label">Victoires</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-value">0%</div>
-                <div className="stat-label">Taux de victoire</div>
-              </div>
-            </div>
+            )}
           </div>
 
           <div className="profile-section">
             <h2>Historique des jeux</h2>
             <div className="game-history">
-              <p className="empty-state">Aucune partie jouée pour l'instant</p>
+              {loadingStats ? (
+                <p className="empty-state">Chargement...</p>
+              ) : history.length === 0 ? (
+                <p className="empty-state">Aucune partie jouée pour l'instant</p>
+              ) : (
+                <div className="history-list">
+                  {history.map((game) => (
+                    <div key={game.id} className={`history-item ${game.isWinner ? 'history-item--win' : 'history-item--loss'}`}>
+                      <div className="history-result">
+                        {game.isWinner ? '🏆 Victoire' : '❌ Défaite'}
+                      </div>
+                      <div className="history-details">
+                        <span className="history-players">{game.playerCount} joueurs</span>
+                        <span className="history-color">Couleur : {game.playerColor}</span>
+                        <span className="history-duration">
+                          {game.duration > 60
+                            ? `${Math.floor(game.duration / 60)}min ${game.duration % 60}s`
+                            : `${game.duration}s`
+                          }
+                        </span>
+                        <span className="history-date">
+                          {new Date(game.date).toLocaleDateString('fr-FR', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

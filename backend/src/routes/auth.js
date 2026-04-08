@@ -33,7 +33,7 @@ const avatarUpload = multer({
       return cb(new Error("Format non supporté (jpeg, png, webp uniquement)"))
     }
     cb(null, true)
-  },
+  }
 })
 
 // ── Helpers de validation ──────────────────────────────────
