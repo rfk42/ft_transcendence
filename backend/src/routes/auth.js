@@ -232,7 +232,7 @@ router.get("/42/callback", async (req, res) => {
   }
 })
 
-// ── Routes classiques ──────────────────────────────────────
+// ── Routes classiques ─────────────────────────────────────
 
 router.post("/register", async (req, res) => {
   const { email, username, password } = req.body
