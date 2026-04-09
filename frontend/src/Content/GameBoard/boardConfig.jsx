@@ -1,4 +1,4 @@
-﻿export const PLAYER_ORDER = ['blue', 'red', 'green', 'yellow']
+export const PLAYER_ORDER = ['blue', 'red', 'green', 'yellow']
 
 export const PLAYER_LABELS = {
   blue: 'Bleu',
@@ -56,8 +56,8 @@ export const TRACK_START_INDEX = {
 export const HOME_LANES = {
   blue: ['left-5', 'left-6', 'left-7'],
   red: ['top-4', 'top-7', 'top-10'],
-  green: ['right-4', 'right-5', 'right-6'],
-  yellow: ['bottom-1', 'bottom-4', 'bottom-7'],
+  green: ['right-6', 'right-5', 'right-4'],
+  yellow: ['bottom-7', 'bottom-4', 'bottom-1'],
 }
 
 export const CENTER_TARGETS = {
