@@ -134,8 +134,6 @@ router.get("/google/callback", async (req, res) => {
             email: profile.email,
             username,
             googleId: profile.id,
-            firstName: profile.given_name || null,
-            lastName: profile.family_name || null,
             avatarUrl: profile.picture || null,
           },
         })
@@ -220,8 +218,6 @@ router.get("/42/callback", async (req, res) => {
             email: ftEmail,
             username,
             fortyTwoId: ftId,
-            firstName: profile.first_name || null,
-            lastName: profile.last_name || null,
             avatarUrl: ftAvatar,
           },
         })
@@ -288,21 +284,28 @@ router.get("/me", authenticate, async (req, res) => {
   }
 })
 
-// ── PATCH /auth/me — modifier le nom du profil ──
+// ── PATCH /auth/me — modifier le profil ──
 router.patch("/me", authenticate, async (req, res) => {
   const { username } = req.body
+  const updateData = {}
 
-  if (!username || typeof username !== "string")
-    return res.status(400).json({ error: "Nom d'utilisateur requis" })
+  // Username (optionnel mais validé si présent)
+  if (username !== undefined) {
+    if (typeof username !== "string")
+      return res.status(400).json({ error: "Nom d'utilisateur invalide" })
+    const trimmed = username.trim()
+    if (trimmed.length < USERNAME_MIN || trimmed.length > USERNAME_MAX)
+      return res.status(400).json({ error: `Le nom d'utilisateur doit faire entre ${USERNAME_MIN} et ${USERNAME_MAX} caractères` })
+    updateData.username = trimmed
+  }
 
-  const trimmed = username.trim()
-  if (trimmed.length < USERNAME_MIN || trimmed.length > USERNAME_MAX)
-    return res.status(400).json({ error: `Le nom d'utilisateur doit faire entre ${USERNAME_MIN} et ${USERNAME_MAX} caractères` })
+  if (Object.keys(updateData).length === 0)
+    return res.status(400).json({ error: "Aucune donnée à mettre à jour" })
 
   try {
     const user = await prisma.user.update({
       where: { id: req.userId },
-      data: { username: trimmed },
+      data: updateData,
     })
     res.json({ user: sanitizeUser(user) })
   } catch (err) {
@@ -328,7 +331,7 @@ router.post("/me/avatar", authenticate, (req, res) => {
       const current = await prisma.user.findUnique({ where: { id: req.userId } })
       if (current?.avatarUrl?.startsWith("/uploads/avatars/")) {
         const oldPath = path.join(UPLOAD_DIR, current.avatarUrl.replace("/uploads/", ""))
-        fs.unlink(oldPath, () => {}) // suppression silencieuse
+        fs.unlink(oldPath, () => {}) // suppression
       }
 
       const avatarUrl = `/uploads/avatars/${req.file.filename}`

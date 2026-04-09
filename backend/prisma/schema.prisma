@@ -18,9 +18,6 @@ model User {
   passwordHash   String?
   
   // Infos de profil
-  firstName      String?
-  lastName       String?
-  bio            String?   // Description courte du profil
   avatarUrl      String?   // URL de la photo de profil
   
   // Authentification
@@ -40,7 +37,7 @@ model User {
   sentRequests     Friend[]           @relation("SentRequests")
   receivedRequests Friend[]           @relation("ReceivedRequests")
   gamePlayers      GamePlayer[]
-  userStats        UserStats?         // Relation 1-1 avec statistiques
+  userStats        UserStats?
   gamesWon         Game[]             @relation("GameWinner")
 }
 
@@ -76,7 +73,6 @@ model Game {
 
   // Relations
   players     GamePlayer[]
-  moves       GameMove[]
   matchHistory MatchHistory?
 }
 
@@ -98,20 +94,6 @@ model GamePlayer {
   @@unique([gameId, color])   // deux joueurs ne peuvent pas avoir la même couleur
 }
 
-// TABLE GAME_MOVES (historique des coups)
-model GameMove {
-  id         String   @id @default(uuid())
-  diceValue  Int      // résultat du dé (1 à 6)
-  pieceIndex Int      // quelle pièce a bougé (0 à 3)
-  fromPos    Int      // position avant le coup
-  toPos      Int      // position après le coup
-  createdAt  DateTime @default(now())
-
-  // Dans quelle partie
-  gameId     String
-  game       Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
-}
-
 // TABLE USER_STATS (statistiques de jeu par user)
 model UserStats {
   id              String   @id @default(uuid())
@@ -128,8 +110,6 @@ model UserStats {
   // Stats détaillées
   totalMoves      Int     @default(0)
   averageGameDuration Int @default(0) // en secondes
-  bestStreak      Int     @default(0) // plus belle série de victoires
-  currentStreak   Int     @default(0) // série actuelle
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

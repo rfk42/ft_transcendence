@@ -91,8 +91,6 @@ router.post("/:id/finish", authenticate, async (req, res) => {
       const newGamesWon = currentStats.gamesWon + (isWinner ? 1 : 0);
       const newGamesLost = currentStats.gamesLost + (isWinner ? 0 : 1);
       const newWinRate = newGamesPlayed > 0 ? (newGamesWon / newGamesPlayed) * 100 : 0;
-      const newCurrentStreak = isWinner ? currentStats.currentStreak + 1 : 0;
-      const newBestStreak = Math.max(currentStats.bestStreak, newCurrentStreak);
 
       await prisma.userStats.update({
         where: { userId: req.userId },
@@ -102,8 +100,6 @@ router.post("/:id/finish", authenticate, async (req, res) => {
           gamesLost: newGamesLost,
           winRate: Math.round(newWinRate * 100) / 100,
           totalMoves: currentStats.totalMoves + (totalMoves || 0),
-          currentStreak: newCurrentStreak,
-          bestStreak: newBestStreak,
           averageGameDuration: Math.round(
             ((currentStats.averageGameDuration * currentStats.totalGamesPlayed) + (duration || 0)) / newGamesPlayed
           ),
@@ -118,8 +114,6 @@ router.post("/:id/finish", authenticate, async (req, res) => {
           gamesLost: isWinner ? 0 : 1,
           winRate: isWinner ? 100 : 0,
           totalMoves: totalMoves || 0,
-          currentStreak: isWinner ? 1 : 0,
-          bestStreak: isWinner ? 1 : 0,
           averageGameDuration: duration || 0,
         },
       });
@@ -148,8 +142,6 @@ router.get("/stats/me", authenticate, async (req, res) => {
         rank: null,
         totalMoves: 0,
         averageGameDuration: 0,
-        bestStreak: 0,
-        currentStreak: 0,
       };
     }
 
@@ -230,7 +222,6 @@ router.get("/leaderboard", async (req, res) => {
       losses: s.gamesLost,
       gamesPlayed: s.totalGamesPlayed,
       winRate: s.winRate,
-      bestStreak: s.bestStreak,
     }));
 
     res.json({ leaderboard });
@@ -269,7 +260,6 @@ router.get("/user/:id", async (req, res) => {
       wins: stats.gamesWon,
       gamesPlayed: stats.totalGamesPlayed,
       winRate: stats.winRate,
-      bestStreak: stats.bestStreak
     });
   } catch (err) {
     console.error("Erreur récupération profil joueur:", err);
