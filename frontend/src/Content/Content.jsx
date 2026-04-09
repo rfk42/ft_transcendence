@@ -2,6 +2,7 @@
 import AuthForm from './Auth/AuthForm.jsx'
 import OAuthCallback from './Auth/OAuthCallback.jsx'
 import Profile from './Profile/Profile.jsx'
+import ProfilePlayer from './PlayerProfile/PlayerProfile.jsx'
 import Leaderboard from './Leaderboard/Leaderboard.jsx'
 import ProtectedRoute from '../components/ProtectedRoute.jsx'
 import './Content.scss'
@@ -31,6 +32,7 @@ const Content = () => (
         }
       />
       <Route path="/leaderboard" element={<Leaderboard />} />
+      <Route path="/profile/:id" element={<ProfilePlayer />} />
     </Routes>
   </section>
 )

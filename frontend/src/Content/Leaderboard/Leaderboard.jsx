@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { Link, useNavigate } from 'react-router'
 import './Leaderboard.scss'
 
 const Leaderboard = () => {
   const { user } = useAuth()
   const [players, setPlayers] = useState([])
   const [loading, setLoading] = useState(true)
+
+  const [selectedPlayer, setSelectedPlayer] = useState(null)
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -58,14 +61,19 @@ const Leaderboard = () => {
                 {topThree.map((player, i) => (
                   <div key={player.id} className={`podium-card podium-${i + 1}`}>
                     <span className="podium-rank">{i + 1}{i === 0 ? 'er' : 'e'}</span>
-                    <div className="podium-avatar">
-                      {player.avatarUrl ? (
-                        <img src={player.avatarUrl} alt="" referrerPolicy="no-referrer" />
-                      ) : (
-                        <span className="avatar-placeholder">{player.username[0].toUpperCase()}</span>
-                      )}
-                    </div>
-                    <span className="podium-name">{player.username}</span>
+                    
+                    {/* On entoure l'avatar et le nom avec le Link */}
+                    <Link to={`/profile/${player.id}`} style={{ textDecoration: 'none', display: 'contents' }}>
+                      <div className="podium-avatar">
+                        {player.avatarUrl ? (
+                          <img src={player.avatarUrl} alt="" referrerPolicy="no-referrer" />
+                        ) : (
+                          <span className="avatar-placeholder">{player.username[0].toUpperCase()}</span>
+                        )}
+                      </div>
+                      <span className="podium-name">{player.username}</span>
+                    </Link>
+
                     <span className="podium-wins">{player.wins} victoire{player.wins > 1 ? 's' : ''}</span>
                   </div>
                 ))}
@@ -104,16 +112,18 @@ const Leaderboard = () => {
                 return (
                   <div key={player.id} className={`lb-row ${isCurrentUser ? 'lb-row-current' : ''}`}>
                     <span className="lb-rank">{rank}</span>
-                    <div className="lb-avatar">
-                      {player.avatarUrl ? (
-                        <img src={player.avatarUrl} alt="" referrerPolicy="no-referrer" />
-                      ) : (
-                        <span className="avatar-placeholder">
-                          {player.username[0].toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    <span className="lb-name">{player.username}{isCurrentUser ? ' (toi)' : ''}</span>
+                    <Link to={`/profile/${player.id}`} className="lb-player-info-link">
+                      <div className="lb-avatar">
+                        {player.avatarUrl ? (
+                          <img src={player.avatarUrl} alt="" referrerPolicy="no-referrer" />
+                        ) : (
+                          <span className="avatar-placeholder">
+                            {player.username[0].toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <span className="lb-name">{player.username}{isCurrentUser ? ' (toi)' : ''}</span>
+                    </Link>
                     <div className="lb-bar-area">
                       <div
                         className="lb-bar"
