@@ -188,10 +188,6 @@ const Profile = () => {
                   <div className="stat-value">{stats?.winRate ? `${Math.round(stats.winRate)}%` : '0%'}</div>
                   <div className="stat-label">Taux de victoire</div>
                 </div>
-                <div className="stat-card">
-                  <div className="stat-value">{stats?.totalMoves ?? 0}</div>
-                  <div className="stat-label">Coups joués</div>
-                </div>
               </div>
             )}
           </div>

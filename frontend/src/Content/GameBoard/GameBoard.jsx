@@ -78,7 +78,6 @@ const GameBoard = () => {
 
   // ─── Tracking pour les stats ──────────────────────────────
   const [gameId, setGameId] = useState(null)
-  const [moveCount, setMoveCount] = useState(0)
   const gameStartRef = useRef(null)
 
   const activePlayers = getPlayersForCount(playerCount)
@@ -99,6 +98,18 @@ const GameBoard = () => {
     return () => {
       animationRunRef.current += 1
     }
+  }, [])
+
+  // ─── Créer la première partie en DB au montage ────────────
+  useEffect(() => {
+    if (!user?.token) return
+    const initGame = async () => {
+      const players = getPlayersForCount(playerCount)
+      const id = await createGameInDB(players[0], playerCount)
+      setGameId(id)
+      gameStartRef.current = Date.now()
+    }
+    initGame()
   }, [])
 
   useEffect(() => {
@@ -149,7 +160,7 @@ const GameBoard = () => {
   }
 
   // ─── Créer une partie en DB si connecté ───────────────────
-  const createGameInDB = useCallback(async (playerColor) => {
+  const createGameInDB = useCallback(async (playerColor, count) => {
     if (!user?.token) return null
     try {
       const res = await fetch('/api/game', {
@@ -158,7 +169,7 @@ const GameBoard = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${user.token}`,
         },
-        body: JSON.stringify({ playerCount, playerColor }),
+        body: JSON.stringify({ playerCount: count, playerColor }),
       })
       if (!res.ok) return null
       const data = await res.json()
@@ -166,7 +177,7 @@ const GameBoard = () => {
     } catch {
       return null
     }
-  }, [user, playerCount])
+  }, [user])
 
   // ─── Enregistrer la fin de partie en DB ───────────────────
   const finishGameInDB = useCallback(async (gId, winnerColor, players) => {
@@ -184,14 +195,13 @@ const GameBoard = () => {
         body: JSON.stringify({
           winnerColor,
           players,
-          totalMoves: moveCount,
           duration,
         }),
       })
     } catch {
       // silently fail
     }
-  }, [user, moveCount])
+  }, [user])
 
   const startNewGame = async (nextPlayerCount = playerCount) => {
     const nextPlayers = getPlayersForCount(nextPlayerCount)
@@ -204,7 +214,6 @@ const GameBoard = () => {
     setWinner(null)
     setAnimatingPawnId(null)
     setAnimatedPawnsByPlayer(null)
-    setMoveCount(0)
     gameStartRef.current = Date.now()
     setStatusMessage(
       `Nouvelle partie a ${nextPlayerCount} joueur${
@@ -214,7 +223,7 @@ const GameBoard = () => {
     setPawnsByPlayer(createInitialPawns(nextPlayers))
 
     // Créer la partie en DB (le user prend la première couleur)
-    const newGameId = await createGameInDB(nextPlayers[0])
+    const newGameId = await createGameInDB(nextPlayers[0], nextPlayerCount)
     setGameId(newGameId)
   }
 
@@ -275,8 +284,6 @@ const GameBoard = () => {
     if (!movingPawn) {
       return
     }
-
-    setMoveCount((prev) => prev + 1)
 
     const result = applyPawnMove(pawnsByPlayer, pawnId, roll, activePlayers)
     const path = buildMovePath(movingPawn.progress, result.movedPawn.progress)
