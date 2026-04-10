@@ -9,13 +9,15 @@ const authenticate = require("../middleware/auth")
 
 const router = express.Router()
 
-// ── Configuration Multer (upload avatar) ───────────────────
+//  Configuration Multer (upload avatar) 
+// Répertoire de destination des fichiers uploadés (configurable via env)
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "uploads")
 const AVATAR_DIR = path.join(UPLOAD_DIR, "avatars")
 
 // Crée le dossier avatars s'il n'existe pas
 fs.mkdirSync(AVATAR_DIR, { recursive: true })
 
+// Nom du fichier = <userId>-<timestamp>.<ext> pour éviter les collisions
 const avatarStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, AVATAR_DIR),
   filename: (req, file, cb) => {
@@ -36,7 +38,7 @@ const avatarUpload = multer({
   }
 })
 
-// ── Helpers de validation ──────────────────────────────────
+//  Helpers de validation 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const PASSWORD_MIN = 6
 const USERNAME_MIN = 3
@@ -57,15 +59,15 @@ function validateLogin({ username, password }) {
   return null
 }
 
-// Utilitaire pour retirer le passwordHash d'un objet user
+// Retire les champs sensibles (hash du mdp, secret 2FA) avant d'envoyer le user au client
 function sanitizeUser(user) {
   const { passwordHash, twofaSecret, ...safe } = user
   return safe
 }
 
-// ── Routes ─────────────────────────────────────────────────
+//  Routes 
 
-// ── Google OAuth 2.0 ───────────────────────────────────────
+//  Google OAuth 2.0 
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
@@ -88,7 +90,7 @@ router.get("/google/callback", async (req, res) => {
   if (!code) return res.status(400).json({ error: "Code manquant" })
 
   try {
-    // Échange du code contre un access token
+    // Échange du code d'autorisation OAuth contre un access_token via l'API Google
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -110,7 +112,8 @@ router.get("/google/callback", async (req, res) => {
     const profile = await userInfoRes.json()
     if (!userInfoRes.ok) return res.status(401).json({ error: "Impossible de récupérer le profil Google" })
 
-    // Recherche ou création de l'utilisateur
+    // Recherche ou création de l'utilisateur via googleId
+    // Si aucun compte Google trouvé, on cherche par email pour lier un compte existant
     let user = await prisma.user.findUnique({ where: { googleId: profile.id } })
     if (!user) {
       // Vérifie si un compte existe déjà avec cet email
@@ -123,6 +126,7 @@ router.get("/google/callback", async (req, res) => {
         })
       } else {
         // Crée un nouveau compte
+        // Génère un username unique en ajoutant un suffixe numérique si nécessaire
         const baseUsername = profile.name?.replace(/\s+/g, "") || profile.email.split("@")[0]
         let username = baseUsername
         let suffix = 1
@@ -150,7 +154,7 @@ router.get("/google/callback", async (req, res) => {
   }
 })
 
-// ── 42 OAuth 2.0 ──────────────────────────────────────────
+//  42 OAuth 2.0 
 
 const FT_CLIENT_ID = process.env.FT_CLIENT_ID
 const FT_CLIENT_SECRET = process.env.FT_CLIENT_SECRET
@@ -171,7 +175,7 @@ router.get("/42/callback", async (req, res) => {
   if (!code) return res.status(400).json({ error: "Code manquant" })
 
   try {
-    // Échange du code contre un access token
+    // Échange du code d'autorisation OAuth contre un access_token via l'API 42
     const tokenRes = await fetch("https://api.intra.42.fr/oauth/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -193,12 +197,14 @@ router.get("/42/callback", async (req, res) => {
     const profile = await userInfoRes.json()
     if (!userInfoRes.ok) return res.status(401).json({ error: "Impossible de récupérer le profil 42" })
 
+    // Extraction des infos utiles depuis le profil 42 (id, email, login, avatar)
     const ftId = String(profile.id)
     const ftEmail = profile.email
     const ftLogin = profile.login
     const ftAvatar = profile.image?.versions?.medium || profile.image?.link || null
 
-    // Recherche ou création de l'utilisateur
+    // Recherche ou création de l'utilisateur via fortyTwoId
+    // Si pas trouvé, on cherche par email pour lier un compte existant
     let user = await prisma.user.findUnique({ where: { fortyTwoId: ftId } })
     if (!user) {
       user = await prisma.user.findUnique({ where: { email: ftEmail } })
@@ -208,6 +214,7 @@ router.get("/42/callback", async (req, res) => {
           data: { fortyTwoId: ftId, avatarUrl: ftAvatar || user.avatarUrl },
         })
       } else {
+        // Génère un username unique basé sur le login 42
         let username = ftLogin
         let suffix = 1
         while (await prisma.user.findUnique({ where: { username } })) {
@@ -232,7 +239,7 @@ router.get("/42/callback", async (req, res) => {
   }
 })
 
-// ── Routes classiques ─────────────────────────────────────
+//  Routes classiques 
 
 router.post("/register", async (req, res) => {
   const { email, username, password } = req.body
@@ -241,12 +248,14 @@ router.post("/register", async (req, res) => {
   if (validationError) return res.status(400).json({ error: validationError })
 
   try {
+    // Hash bcrypt avec salt rounds = 10
     const hash = await bcrypt.hash(password, 10)
     const user = await prisma.user.create({
       data: { email, username, passwordHash: hash }
     })
     res.status(201).json({ user: sanitizeUser(user) })
   } catch (err) {
+    // P2002 = violation de contrainte unique Prisma (email ou username déjà pris)
     if (err.code === "P2002")
       return res.status(409).json({ error: "Email ou username déjà utilisé" })
     res.status(500).json({ error: "Erreur serveur" })
@@ -260,6 +269,7 @@ router.post("/login", async (req, res) => {
   if (validationError) return res.status(400).json({ error: validationError })
 
   try {
+    // Vérifie que le user existe ET qu'il a un mot de passe (pas un compte OAuth-only)
     const user = await prisma.user.findUnique({ where: { username } })
     if (!user || !user.passwordHash) return res.status(401).json({ error: "Nom d'utilisateur ou mot de passe incorrect" })
 
@@ -273,7 +283,7 @@ router.post("/login", async (req, res) => {
   }
 })
 
-// ── GET /auth/me — renvoie l'utilisateur courant à partir du token ──
+//  GET /auth/me — renvoie l'utilisateur courant à partir du token 
 router.get("/me", authenticate, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.userId } })
@@ -284,7 +294,7 @@ router.get("/me", authenticate, async (req, res) => {
   }
 })
 
-// ── PATCH /auth/me — modifier le profil ──
+//  PATCH /auth/me — modifier le profil 
 router.patch("/me", authenticate, async (req, res) => {
   const { username } = req.body
   const updateData = {}
@@ -315,7 +325,7 @@ router.patch("/me", authenticate, async (req, res) => {
   }
 })
 
-// ── POST /auth/me/avatar — upload de photo de profil ──
+//  POST /auth/me/avatar — upload de photo de profil 
 router.post("/me/avatar", authenticate, (req, res) => {
   avatarUpload.single("avatar")(req, res, async (err) => {
     if (err instanceof multer.MulterError) {
@@ -327,7 +337,7 @@ router.post("/me/avatar", authenticate, (req, res) => {
     if (!req.file) return res.status(400).json({ error: "Aucun fichier envoyé" })
 
     try {
-      // Supprimer l'ancien avatar local s'il existe
+      // Supprime l'ancien fichier avatar local s'il existe (pas les URLs OAuth externes)
       const current = await prisma.user.findUnique({ where: { id: req.userId } })
       if (current?.avatarUrl?.startsWith("/uploads/avatars/")) {
         const oldPath = path.join(UPLOAD_DIR, current.avatarUrl.replace("/uploads/", ""))
@@ -346,7 +356,7 @@ router.post("/me/avatar", authenticate, (req, res) => {
   })
 })
 
-// ── DELETE /auth/me/avatar — supprimer sa photo de profil ──
+//  DELETE /auth/me/avatar — supprimer sa photo de profil 
 router.delete("/me/avatar", authenticate, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.userId } })

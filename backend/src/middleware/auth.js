@@ -1,8 +1,8 @@
 const jwt = require("jsonwebtoken")
 
 /**
- * Middleware qui vérifie le token JWT dans le header Authorization.
- * Attache req.userId si le token est valide.
+ Middleware qui vérifie le token JWT dans le header Authorization.
+ Attache req.userId si le token est valide.
  */
 const authenticate = (req, res, next) => {
   const header = req.headers.authorization

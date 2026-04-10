@@ -76,7 +76,7 @@ const GameBoard = () => {
   const [animatedPawnsByPlayer, setAnimatedPawnsByPlayer] = useState(null)
   const [animatingPawnId, setAnimatingPawnId] = useState(null)
 
-  // ─── Tracking pour les stats ──────────────────────────────
+  //  Tracking pour les stats 
   const [gameId, setGameId] = useState(null)
   const gameStartRef = useRef(null)
 
@@ -100,7 +100,7 @@ const GameBoard = () => {
     }
   }, [])
 
-  // ─── Créer la première partie en DB au montage ────────────
+  //  Créer la première partie en DB au montage 
   useEffect(() => {
     if (!user?.token) return
     const initGame = async () => {
@@ -159,7 +159,7 @@ const GameBoard = () => {
     }
   }
 
-  // ─── Créer une partie en DB si connecté ───────────────────
+  //  Créer une partie en DB si connecté 
   const createGameInDB = useCallback(async (playerColor, count) => {
     if (!user?.token) return null
     try {
@@ -179,7 +179,7 @@ const GameBoard = () => {
     }
   }, [user])
 
-  // ─── Enregistrer la fin de partie en DB ───────────────────
+  //  Enregistrer la fin de partie en DB 
   const finishGameInDB = useCallback(async (gId, winnerColor, players) => {
     if (!user?.token || !gId) return
     try {

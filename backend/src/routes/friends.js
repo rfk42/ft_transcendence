@@ -17,13 +17,13 @@ function formatUser(user) {
   }
 }
 
-// 
 // GET /friends — Liste des amis acceptés + demandes en attente
-// 
+
 router.get("/", authenticate, async (req, res) => {
   try {
+    // Requêtes parallèles : récupère les relations envoyées ET reçues en une seule passe
     const [sent, received] = await Promise.all([
-      // Demandes envoyées par moi
+      // Demandes envoyées par moi (je suis userId)
       prisma.friend.findMany({
         where: { userId: req.userId },
         include: {
@@ -32,7 +32,7 @@ router.get("/", authenticate, async (req, res) => {
           },
         },
       }),
-      // Demandes reçues par moi
+      // Demandes reçues par moi (je suis friendId)
       prisma.friend.findMany({
         where: { friendId: req.userId },
         include: {
@@ -42,6 +42,8 @@ router.get("/", authenticate, async (req, res) => {
         },
       }),
     ])
+
+    // On trie les relations par statut pour les envoyer dans des listes séparées
 
     // Amis acceptés (relation bidirectionnelle : status = accepted des deux côtés)
     const friends = sent
@@ -70,9 +72,7 @@ router.get("/", authenticate, async (req, res) => {
   }
 })
 
-// 
-// POST /friends/request — Envoyer une demande d'ami (par username)
-// 
+// POST /friends/request — Envoyer une demande d'ami (par username) 
 router.post("/request", authenticate, async (req, res) => {
   const { username } = req.body
 
@@ -94,7 +94,7 @@ router.post("/request", authenticate, async (req, res) => {
       return res.status(400).json({ error: "Tu ne peux pas t'ajouter toi-même" })
     }
 
-    // Vérifier si une relation existe déjà dans un sens ou dans l'autre
+    // Vérifie les deux sens de la relation pour éviter les doublons (A→B ou B→A)
     const existing = await prisma.friend.findFirst({
       where: {
         OR: [
@@ -138,10 +138,8 @@ router.post("/request", authenticate, async (req, res) => {
     res.status(500).json({ error: "Erreur serveur" })
   }
 })
-
-// 
+ 
 // PATCH /friends/:relationId/accept — Accepter une demande reçue
-// 
 router.patch("/:relationId/accept", authenticate, async (req, res) => {
   const { relationId } = req.params
 
@@ -180,9 +178,7 @@ router.patch("/:relationId/accept", authenticate, async (req, res) => {
   }
 })
 
-// 
-// PATCH /friends/:relationId/decline — Refuser une demande reçue
-// 
+// PATCH /friends/:relationId/decline — Refuser une demande reçue 
 router.patch("/:relationId/decline", authenticate, async (req, res) => {
   const { relationId } = req.params
 
@@ -270,7 +266,8 @@ router.get("/search", authenticate, async (req, res) => {
       take: 20,
     })
 
-    // Pour chaque résultat, indiquer si une relation existe déjà
+    // Pour chaque résultat, on récupère les relations existantes pour indiquer
+    // au frontend si l'utilisateur est déjà ami, en attente, bloqué, etc.
     const relations = await prisma.friend.findMany({
       where: {
         OR: [
@@ -280,8 +277,10 @@ router.get("/search", authenticate, async (req, res) => {
       },
     })
 
+    // Construit un index peerId → relation pour un accès O(1) lors du mapping
     const relByPeer = {}
     for (const r of relations) {
+      // Détermine l'id du « pair » : si je suis l'émetteur, le pair est friendId et vice-versa
       const peerId = r.userId === req.userId ? r.friendId : r.userId
       relByPeer[peerId] = { status: r.status, relationId: r.id, isSender: r.userId === req.userId }
     }

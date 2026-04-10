@@ -7,7 +7,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ── Rate limiting global (500 req / 15 min par IP) ──
+//  Rate limiting global (500 req / 15 min par IP) 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
@@ -17,7 +17,7 @@ const globalLimiter = rateLimit({
 });
 app.use(globalLimiter);
 
-// ── Rate limiting strict sur l'auth (20 req / 15 min par IP) ──
+//  Rate limiting strict sur l'auth (20 req / 15 min par IP) 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,

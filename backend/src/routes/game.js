@@ -3,7 +3,7 @@ const router = express.Router();
 const prisma = require("../db");
 const authenticate = require("../middleware/auth");
 
-// ─── POST /game ─ Créer une nouvelle partie ──────────────────────────────────
+//  POST /game  Créer une nouvelle partie 
 router.post("/", authenticate, async (req, res) => {
   try {
     const { playerCount, playerColor } = req.body;
@@ -12,6 +12,7 @@ router.post("/", authenticate, async (req, res) => {
       return res.status(400).json({ error: "playerCount et playerColor requis" });
     }
 
+    // Crée la partie et le premier joueur en une seule transaction Prisma (nested create)
     const game = await prisma.game.create({
       data: {
         status: "playing",
@@ -33,7 +34,7 @@ router.post("/", authenticate, async (req, res) => {
   }
 });
 
-// ─── POST /game/:id/finish ─ Enregistrer la fin d'une partie ─────────────────
+//  POST /game/:id/finish  Enregistrer la fin d'une partie 
 router.post("/:id/finish", authenticate, async (req, res) => {
   try {
     const { id } = req.params;
@@ -57,7 +58,7 @@ router.post("/:id/finish", authenticate, async (req, res) => {
       return res.status(400).json({ error: "Partie déjà terminée" });
     }
 
-    // Déterminer si le user connecté est le gagnant
+    // Détermine si le user connecté est le gagnant en comparant sa couleur avec winnerColor
     const userPlayer = game.players.find((p) => p.userId === req.userId);
     const isWinner = userPlayer && userPlayer.color === winnerColor;
 
@@ -71,7 +72,7 @@ router.post("/:id/finish", authenticate, async (req, res) => {
       },
     });
 
-    // Créer l'entrée MatchHistory
+    // Sauvegarde les données détaillées de la partie (joueurs, durée, coups)
     await prisma.matchHistory.create({
       data: {
         gameId: id,
@@ -81,15 +82,17 @@ router.post("/:id/finish", authenticate, async (req, res) => {
       },
     });
 
-    // Mettre à jour les stats du user
+    // Met à jour (ou crée) les stats du user : wins, losses, winRate, durée moyenne
     const currentStats = await prisma.userStats.findUnique({
       where: { userId: req.userId },
     });
 
     if (currentStats) {
+      // Recalcule toutes les stats de manière incrémentale
       const newGamesPlayed = currentStats.totalGamesPlayed + 1;
       const newGamesWon = currentStats.gamesWon + (isWinner ? 1 : 0);
       const newGamesLost = currentStats.gamesLost + (isWinner ? 0 : 1);
+      // Winrate en % arrondi à 2 décimales
       const newWinRate = newGamesPlayed > 0 ? (newGamesWon / newGamesPlayed) * 100 : 0;
 
       await prisma.userStats.update({
@@ -100,6 +103,7 @@ router.post("/:id/finish", authenticate, async (req, res) => {
           gamesLost: newGamesLost,
           winRate: Math.round(newWinRate * 100) / 100,
           totalMoves: currentStats.totalMoves + (totalMoves || 0),
+          // Moyenne pondérée : (ancienne_moyenne * nb_parties_précédentes + durée) / nb_total
           averageGameDuration: Math.round(
             ((currentStats.averageGameDuration * currentStats.totalGamesPlayed) + (duration || 0)) / newGamesPlayed
           ),
@@ -126,7 +130,7 @@ router.post("/:id/finish", authenticate, async (req, res) => {
   }
 });
 
-// ─── GET /game/stats/me ─ Récupérer les stats du user connecté ───────────────
+//  GET /game/stats/me  Récupérer les stats du user connecté 
 router.get("/stats/me", authenticate, async (req, res) => {
   try {
     let stats = await prisma.userStats.findUnique({
@@ -134,6 +138,7 @@ router.get("/stats/me", authenticate, async (req, res) => {
     });
 
     if (!stats) {
+      // Retourne des stats vides si le user n'a jamais joué
       stats = {
         totalGamesPlayed: 0,
         gamesWon: 0,
@@ -152,9 +157,10 @@ router.get("/stats/me", authenticate, async (req, res) => {
   }
 });
 
-// ─── GET /game/history ─ Récupérer l'historique des parties du user ──────────
+// GET /game/history  Récupérer l'historique des parties du user
 router.get("/history", authenticate, async (req, res) => {
   try {
+    // Récupère les 20 dernières parties finies auxquelles le user a participé
     const games = await prisma.game.findMany({
       where: {
         status: "finished",
@@ -175,6 +181,7 @@ router.get("/history", authenticate, async (req, res) => {
       take: 20,
     });
 
+    // Transforme les données brutes en un format simplifié pour le frontend
     const history = games.map((game) => {
       const userPlayer = game.players.find((p) => p.userId === req.userId);
       return {
@@ -195,9 +202,10 @@ router.get("/history", authenticate, async (req, res) => {
   }
 });
 
-// ─── GET /game/leaderboard ─ Classement global ──────────────────────────────
+//  GET /game/leaderboard  Classement global 
 router.get("/leaderboard", async (req, res) => {
   try {
+    // Classement par nombre de victoires, limité aux joueurs ayant au moins 1 partie
     const stats = await prisma.userStats.findMany({
       where: { totalGamesPlayed: { gt: 0 } },
       orderBy: { gamesWon: "desc" },
@@ -213,6 +221,7 @@ router.get("/leaderboard", async (req, res) => {
       },
     });
 
+    // Aplatit les données stats + user en un objet avec rang calculé par position dans le tri
     const leaderboard = stats.map((s, index) => ({
       rank: index + 1,
       id: s.user.id,
