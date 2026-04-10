@@ -346,4 +346,26 @@ router.post("/me/avatar", authenticate, (req, res) => {
   })
 })
 
+// ── DELETE /auth/me/avatar — supprimer sa photo de profil ──
+router.delete("/me/avatar", authenticate, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.userId } })
+    if (!user) return res.status(404).json({ error: "Utilisateur introuvable" })
+
+    // Supprimer le fichier local si c'est un upload local (pas une URL OAuth)
+    if (user.avatarUrl?.startsWith("/uploads/avatars/")) {
+      const filePath = path.join(UPLOAD_DIR, user.avatarUrl.replace("/uploads/", ""))
+      fs.unlink(filePath, () => {})
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: req.userId },
+      data: { avatarUrl: null },
+    })
+    res.json({ user: sanitizeUser(updated) })
+  } catch {
+    res.status(500).json({ error: "Erreur serveur" })
+  }
+})
+
 module.exports = router

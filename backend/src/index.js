@@ -45,3 +45,6 @@ app.use("/auth", authLimiter, authRoutes)
 const gameRoutes = require("./routes/game")
 app.use("/game", gameRoutes)
 
+const friendRoutes = require("./routes/friends")
+app.use("/friends", friendRoutes)
+
