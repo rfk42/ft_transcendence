@@ -11,6 +11,9 @@ const Profile = () => {
   const [newUsername, setNewUsername] = useState(user?.username || '')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  
+  // 🌟 NOUVEAU : Un état pour savoir si l'image a planté (erreur 404, lien mort, etc.)
+  const [avatarFailed, setAvatarFailed] = useState(false)
 
   // Stats & historique
   const [stats, setStats] = useState(null)
@@ -165,12 +168,22 @@ const Profile = () => {
       <div className="profile-card">
         <div className="profile-header">
           <div className="profile-avatar-wrapper" onClick={() => fileInputRef.current?.click()}>
-            <img
-              src={preview || user?.avatarUrl || '/default-avatar.png'}
-              alt=""
-              className="profile-avatar"
-              referrerPolicy="no-referrer"
-            />
+            
+            {/* 🌟 NOUVELLE LOGIQUE D'AFFICHAGE DE L'AVATAR */}
+            {(preview || (user?.avatarUrl && !avatarFailed)) ? (
+              <img
+                src={preview || user?.avatarUrl}
+                alt=""
+                className="profile-avatar"
+                referrerPolicy="no-referrer"
+                onError={() => setAvatarFailed(true)} // Si l'image casse, on passe à true
+              />
+            ) : (
+              <div className="profile-avatar-placeholder">
+                {username ? username[0].toUpperCase() : '?'}
+              </div>
+            )}
+
             <span className="avatar-overlay"><EditIcon size={18} /></span>
             <input
               ref={fileInputRef}
@@ -178,12 +191,16 @@ const Profile = () => {
               accept="image/jpeg,image/png,image/webp"
               onChange={(e) => {
                 const file = e.target.files[0]
-                if (file) handleAvatarUpload(file)
+                if (file) {
+                  setAvatarFailed(false) // On réinitialise l'erreur si on upload un nouveau fichier
+                  handleAvatarUpload(file)
+                }
                 e.target.value = ''
               }}
               hidden
             />
           </div>
+          
           {uploadProgress > 0 && (
             <div className="upload-progress">
               <div className="upload-progress-bar" style={{ width: `${uploadProgress}%` }} />
