@@ -48,3 +48,6 @@ app.use("/game", gameRoutes)
 const friendRoutes = require("./routes/friends")
 app.use("/friends", friendRoutes)
 
+const uploadRoutes = require("./routes/upload")
+app.use("/upload", uploadRoutes)
+

@@ -52,26 +52,70 @@ const Profile = () => {
     fetchStats()
   }, [user?.token])
 
-  const handleAvatarUpload = async (file) => {
+  const [preview, setPreview] = useState(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
+
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+  const MAX_SIZE = 5 * 1024 * 1024 // 5 Mo
+
+  const handleAvatarUpload = (file) => {
     if (!file) return
+
+    // Validation client : type et taille avant d'envoyer
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setError('Format non supporté (jpeg, png, webp uniquement)')
+      return
+    }
+    if (file.size > MAX_SIZE) {
+      setError('Fichier trop volumineux (5 Mo max)')
+      return
+    }
+
+    // Preview immédiate avant l'envoi
+    setPreview(URL.createObjectURL(file))
+    setError('')
+    setUploadProgress(10) // démarre à 10% pour être visible dès le début
+
     const formData = new FormData()
     formData.append('avatar', file)
 
-    try {
-      const res = await fetch('/api/auth/me/avatar', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${user.token}` },
-        body: formData,
-      })
-      const data = await res.json()
-      if (!res.ok) {
+    // XHR pour avoir la progression de l'upload
+    const xhr = new XMLHttpRequest()
+
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable)
+        setUploadProgress(Math.round((e.loaded / e.total) * 100))
+      else
+        setUploadProgress(50) // valeur par défaut si l'événement n'a pas de taille
+    })
+
+    xhr.addEventListener('load', () => {
+      const data = JSON.parse(xhr.responseText)
+      setUploadProgress(100) // passe à 100% visuellement
+      if (xhr.status >= 200 && xhr.status < 300) {
+        updateUser(data.user)
+        const img = new Image()
+        img.onload = () => {
+          setPreview(null)
+          setUploadProgress(0)
+        }
+        img.src = data.user.avatarUrl
+      } else {
         setError(data.error || "Erreur lors de l'upload")
-        return
+        setPreview(null)
+        setUploadProgress(0)
       }
-      updateUser(data.user)
-    } catch {
+    })
+
+    xhr.addEventListener('error', () => {
       setError("Erreur lors de l'upload")
-    }
+      setPreview(null)
+      setUploadProgress(0)
+    })
+
+    xhr.open('POST', '/api/auth/me/avatar')
+    xhr.setRequestHeader('Authorization', `Bearer ${user.token}`)
+    xhr.send(formData)
   }
 
   const handleSave = async () => {
@@ -122,7 +166,7 @@ const Profile = () => {
         <div className="profile-header">
           <div className="profile-avatar-wrapper" onClick={() => fileInputRef.current?.click()}>
             <img
-              src={user?.avatarUrl || '/default-avatar.png'}
+              src={preview || user?.avatarUrl || '/default-avatar.png'}
               alt=""
               className="profile-avatar"
               referrerPolicy="no-referrer"
@@ -135,11 +179,17 @@ const Profile = () => {
               onChange={(e) => {
                 const file = e.target.files[0]
                 if (file) handleAvatarUpload(file)
-                e.target.value = '' // reset pour pouvoir re-sélectionner le même fichier
+                e.target.value = ''
               }}
               hidden
             />
           </div>
+          {uploadProgress > 0 && (
+            <div className="upload-progress">
+              <div className="upload-progress-bar" style={{ width: `${uploadProgress}%` }} />
+              <span>{uploadProgress < 100 ? `${uploadProgress}%` : 'Finalisation...'}</span>
+            </div>
+          )}
           <div className="profile-username-area">
             {editing ? (
               <div className="profile-edit-row">
