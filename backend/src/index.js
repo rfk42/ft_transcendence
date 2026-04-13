@@ -19,7 +19,7 @@ app.use(globalLimiter);
 
 //  Rate limiting strict sur l'auth (20 req / 15 min par IP) 
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 500 * 60 * 1000,
   max: 20,
   message: { error: "Trop de tentatives, réessaie dans 15 minutes" },
   standardHeaders: true,

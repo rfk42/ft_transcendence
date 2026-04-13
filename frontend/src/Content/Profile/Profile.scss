@@ -10,169 +10,165 @@
 }
 
 .profile-card {
-  width: min(45rem, 100%);
-  padding: 2rem;
-  border: solid 2px rgba(255, 255, 255, 0.1);
+  width: min(50rem, 100%); // Un peu plus large pour l'historique
+  padding: 2.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.1);
   border-radius: 1.5rem;
   background: #1a1a2e;
   color: #e0e0e0;
-
-  h1 {
-    margin: 0;
-    font-size: 1.8rem;
-    color: #fff;
-  }
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 
   h2 {
-    margin: 0 0 1rem;
-    font-size: 1.1rem;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+    margin: 2rem 0 1rem;
+    font-size: 1.2rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 0.5rem;
     color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
   }
 }
 
+// ── Header (Inspiré de PlayerProfile mais avec Edition) ────────
 .profile-header {
   display: flex;
+  flex-direction: column; 
   align-items: center;
-  gap: 1.2rem;
-  margin-bottom: 2rem;
-}
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+  text-align: center;
 
-.profile-avatar-wrapper {
-  position: relative;
-  cursor: pointer;
-  flex-shrink: 0;
+  .profile-avatar-wrapper {
+    position: relative;
+    width: 8rem; // Même taille que PlayerProfile
+    height: 8rem;
+    border-radius: 50%;
+    border: 4px solid #3b82f6; // Bleu pour ton profil perso
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    overflow: hidden;
 
-  &:hover .avatar-overlay {
-    opacity: 1;
+    &:hover .avatar-overlay {
+      opacity: 1;
+    }
+
+    .profile-avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .avatar-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 50%;
+      opacity: 0;
+      transition: opacity 200ms ease;
+      font-size: 0.8rem;
+      color: #fff;
+      font-weight: 600;
+    }
+  }
+
+  .profile-username-area {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    h1 {
+      margin: 0;
+      font-size: 2.2rem;
+      color: #fff;
+      font-weight: 800;
+    }
   }
 }
 
-.profile-avatar {
-  width: 4rem;
-  height: 4rem;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-}
-
-.avatar-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 50%;
-  opacity: 0;
-  transition: opacity 150ms ease;
-}
-
-.profile-username-area {
-  flex: 1;
-}
-
+// ── Zone d'édition (Pseudo) ──────────────────────────────
 .profile-edit-row {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
+  justify-content: center;
+  gap: 0.8rem;
+  margin-top: 0.5rem;
 
-.profile-edit-input {
-  padding: 0.5rem 0.8rem;
-  border: 2px solid rgba(255, 255, 255, 0.15);
-  border-radius: 0.5rem;
-  font: inherit;
-  font-size: 1.1rem;
-  font-weight: 700;
-  width: 14rem;
-  background: rgba(255, 255, 255, 0.08);
-  color: #e0e0e0;
-
-  &:focus {
-    outline: none;
-    border-color: #3b82f6;
-  }
-}
-
-.profile-edit-btn,
-.profile-save-btn,
-.profile-cancel-btn {
-  padding: 0.4rem 0.9rem;
-  border: 2px solid rgba(255, 255, 255, 0.15);
-  border-radius: 0.5rem;
-  background: transparent;
-  color: #a0a0b8;
-  font: inherit;
-  font-weight: 700;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 150ms ease;
-
-  &:hover:not(:disabled) {
+  .profile-edit-input {
+    padding: 0.5rem 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.6rem;
+    background: rgba(255, 255, 255, 0.08);
     color: #fff;
-    border-color: rgba(255, 255, 255, 0.3);
-  }
+    font: inherit;
+    font-weight: 700;
+    text-align: center;
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    &:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
   }
+}
+
+.profile-edit-btn, .profile-save-btn, .profile-cancel-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 0.6rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .profile-edit-btn {
-  border-color: #3b82f6;
+  background: transparent;
   color: #3b82f6;
-
-  &:hover:not(:disabled) {
-    background: #3b82f6;
-    color: #fff;
-  }
+  border-color: #3b82f6;
+  &:hover { background: rgba(59, 130, 246, 0.1); }
 }
 
 .profile-save-btn {
-  border-color: #3b82f6;
-  color: #3b82f6;
-
-  &:hover:not(:disabled) {
-    background: #3b82f6;
-    color: #fff;
-  }
+  background: #3b82f6;
+  color: #fff;
+  &:hover { background: #2563eb; }
 }
 
-.profile-error {
-  margin: 0.4rem 0 0;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #f77;
-}
-
-.profile-info {
-  display: grid;
-  gap: 2rem;
-}
-
-.profile-section {
-  display: grid;
-  gap: 1rem;
-}
+// ── Statistiques (Même grille que PlayerProfile) ──────────
+// ── Statistiques ──────────────────────────────────────────
 
 .stats-grid {
   display: grid;
+  // Conserve ton affichage responsive d'origine
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .stat-card {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding: 1.5rem 1rem;
   border: 2px solid rgba(255, 255, 255, 0.1);
   border-radius: 1rem;
   background: rgba(255, 255, 255, 0.05);
   text-align: center;
+
+  // 1. On ajoute la fluidité de l'animation
+  transition: transform 0.2s ease, border-color 0.2s ease;
+
+  // 2. L'effet au survol de la souris
+  &:hover {
+    transform: translateY(-5px);
+    // J'ai mis le bleu (#3b82f6) de ton profil perso. 
+    // Si tu préfères l'or du leaderboard, mets #c9a84c à la place !
+    border-color:  #c9a84c; ; 
+  }
 }
 
 .stat-value {
@@ -185,80 +181,50 @@
 .stat-label {
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase; // Pour harmoniser avec l'autre profil
 }
 
-.game-history {
-  padding: 1rem;
-  border: 2px dashed rgba(255, 255, 255, 0.1);
-  border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.03);
-  min-height: 100px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.empty-state {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.4);
-  font-style: italic;
-}
-
-//  Historique des parties 
+// ─── Historique des parties ──────────────────────────────
 .game-history {
   .history-list {
     display: grid;
     gap: 0.75rem;
-    width: 100%;
+  }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.8rem 1.2rem;
+    border-radius: 0.8rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+
+    &--win { border-left: 4px solid #22c55e; }
+    &--loss { border-left: 4px solid #ef4444; }
+
+    .history-result {
+      font-weight: 800;
+      color: #fff;
+      width: 5rem;
+    }
+
+    .history-details {
+      display: flex;
+      gap: 1.5rem;
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .history-date {
+      margin-left: auto;
+      font-size: 0.8rem;
+    }
   }
 }
 
-.history-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
-  border: 2px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  transition: background 150ms ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.06);
-  }
-
-  &--win {
-    border-left: 4px solid #22c55e;
-  }
-
-  &--loss {
-    border-left: 4px solid #ef4444;
-  }
-}
-
-.history-result {
-  font-weight: 700;
-  font-size: 0.9rem;
-  min-width: 6rem;
-  color: #fff;
-}
-
-.history-details {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.2rem;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.5);
-
-  span {
-    white-space: nowrap;
-  }
-}
-
-.history-color {
-  text-transform: capitalize;
-}
-
-.history-date {
-  margin-left: auto;
+.profile-error {
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
 }

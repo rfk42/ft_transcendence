@@ -1,0 +1,142 @@
+@use '/src/_colors.scss' as colors; // Ajuste le chemin selon ton projet
+
+.friends-container {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem;
+  min-height: calc(100vh - 3.5rem);
+}
+
+.friends-card {
+  width: min(45rem, 100%);
+  padding: 2.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.5rem;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.friends-title {
+  margin-top: 0;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+  font-size: 1.8rem;
+  color: #fff;
+  font-weight: 800;
+}
+
+.empty-friends {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 3rem 0;
+  font-size: 1.1rem;
+}
+
+.friends-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.friend-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.2rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: transform 0.2s, background 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateX(5px); // Petit effet de glissement sympa au survol
+  }
+
+  .friend-info {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+  }
+
+  .friend-avatar, .friend-avatar-placeholder {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 50%;
+  }
+
+  .friend-avatar {
+    object-fit: cover;
+  }
+
+  .friend-avatar-placeholder {
+    background: rgba(255, 255, 255, 0.1);
+    color: #3b82f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+
+  .friend-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+
+    .friend-username {
+      font-weight: bold;
+      font-size: 1.2rem;
+      color: #fff;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    .status-indicator {
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+
+      &::before {
+        content: '';
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+
+      &.online {
+        color: #22c55e; // Vert
+        &::before { background: #22c55e; }
+      }
+
+      &.offline {
+        color: rgba(255, 255, 255, 0.4); // Gris
+        &::before { background: rgba(255, 255, 255, 0.4); }
+      }
+    }
+  }
+
+  .remove-friend-btn {
+    padding: 0.6rem 1rem;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 0.8rem;
+    background: transparent;
+    color: #ef4444; // Rouge
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #ef4444;
+      color: #fff;
+      border-color: #ef4444;
+    }
+  }
+}

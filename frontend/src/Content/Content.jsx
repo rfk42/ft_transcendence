@@ -4,6 +4,7 @@ import OAuthCallback from './Auth/OAuthCallback.jsx'
 import Profile from './Profile/Profile.jsx'
 import ProfilePlayer from './PlayerProfile/PlayerProfile.jsx'
 import Leaderboard from './Leaderboard/Leaderboard.jsx'
+import Friends from './Friends/Friends.jsx'
 import ProtectedRoute from '../components/ProtectedRoute.jsx'
 import './Content.scss'
 import { Link, Route, Routes } from 'react-router'
@@ -20,6 +21,7 @@ const Content = () => (
         }
       />
       <Route path="/play" element={<GameBoard />} />
+      {/*<Route path="/room" element={<Room />} />*/}
       <Route path="/login" element={<AuthForm mode="login" />} />
       <Route path="/register" element={<AuthForm mode="register" />} />
       <Route path="/oauth/callback" element={<OAuthCallback />} />
@@ -33,6 +35,7 @@ const Content = () => (
       />
       <Route path="/leaderboard" element={<Leaderboard />} />
       <Route path="/profile/:id" element={<ProfilePlayer />} />
+      <Route path="/friends" element={<Friends />} />
     </Routes>
   </section>
 )

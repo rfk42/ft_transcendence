@@ -193,7 +193,7 @@ const Profile = () => {
           </div>
 
           <div className="profile-section">
-            <h2>Historique des jeux</h2>
+            <h2>Historique des parties</h2>
             <div className="game-history">
               {loadingStats ? (
                 <p className="empty-state">Chargement...</p>

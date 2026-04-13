@@ -46,9 +46,15 @@ router.get("/", authenticate, async (req, res) => {
     // On trie les relations par statut pour les envoyer dans des listes séparées
 
     // Amis acceptés (relation bidirectionnelle : status = accepted des deux côtés)
-    const friends = sent
+    const acceptedSent = sent
       .filter((r) => r.status === "accepted")
       .map((r) => ({ ...formatUser(r.friend), relationId: r.id }))
+
+    const acceptedReceived = received
+      .filter((r) => r.status === "accepted")
+      .map((r) => ({ ...formatUser(r.user), relationId: r.id }))
+
+    const friends = [...acceptedSent, ...acceptedReceived]
 
     // Demandes que j'ai envoyées et qui sont encore en attente
     const pendingSent = sent

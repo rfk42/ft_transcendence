@@ -17,7 +17,7 @@
   background: #1a1a2e; // ancien : colors.$white + border-bottom
   color: #e0e0e0;
 
-  // Nouveau : sections gauche / droite séparées (ancien : .header-left, .header-right groupés)
+  // Nouveau : sections gauche / droite séparées
   .header-left {
     display: flex;
     align-items: center;
@@ -30,7 +30,7 @@
     gap: 0.8rem;
   }
 
-  // Nouveau : style logo texte
+  // Style logo texte
   .header-logo {
     font-size: 1.1rem;
     font-weight: 800;
@@ -39,14 +39,14 @@
     letter-spacing: -0.02em;
   }
 
-  // Nouveau : barre de navigation
+  // Barre de navigation
   .header-nav {
     display: flex;
     align-items: center;
     gap: 0.3rem;
   }
 
-  // Nouveau : liens de navigation avec hover clair
+  // Liens de navigation avec hover clair
   .header-nav-link {
     padding: 0.4rem 0.9rem;
     color: #a0a0b8;
@@ -62,7 +62,167 @@
     }
   }
 
-  // Nouveau : lien profil avec avatar et username (remplace .header-icon-button)
+  // ─── NOTIFICATIONS D'AMIS (NOUVEAU) ───────────────────────
+  
+  .header-notifications {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-right: 0.5rem;
+  }
+
+  .notifications-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, color 0.2s;
+    color: #a0a0b8; // Gris comme les autres liens par défaut
+
+    &:hover {
+      transform: scale(1.1);
+      color: #fff; // S'illumine en blanc au survol
+    }
+
+    .icon-users {
+      width: 24px;
+      height: 24px;
+      stroke: currentColor;
+    }
+
+    .notifications-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background: #ef4444; // Badge rouge
+      color: white;
+      font-size: 0.7rem;
+      font-weight: bold;
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 2px solid #1a1a2e; // Coupe la bordure avec la couleur du header
+    }
+  }
+
+  .notifications-dropdown {
+    position: absolute;
+    top: 130%; // Juste sous l'icône
+    right: -10px; // Aligné vers la droite
+    width: 280px;
+    background: #1e1e38; // Un peu plus clair que le header pour détacher le menu
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    overflow: hidden;
+
+    .dropdown-header {
+      padding: 1rem;
+      font-weight: bold;
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.6);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .dropdown-empty {
+      padding: 2rem 1rem;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 0.85rem;
+    }
+
+    .friend-request-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      transition: background 0.2s;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .request-info {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+      }
+
+      .request-avatar, .request-avatar-placeholder {
+        width: 2.2rem;
+        height: 2.2rem;
+        border-radius: 50%;
+      }
+
+      .request-avatar {
+        object-fit: cover;
+      }
+
+      .request-avatar-placeholder {
+        background: rgba(255, 255, 255, 0.1);
+        color: #3b82f6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+      }
+
+      .request-username {
+        font-weight: bold;
+        color: #fff;
+        font-size: 0.9rem;
+      }
+
+      .request-actions {
+        display: flex;
+        gap: 0.5rem;
+
+        button {
+          width: 2rem;
+          height: 2rem;
+          border-radius: 50%;
+          border: none;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          transition: all 0.2s;
+          color: white;
+
+          &.btn-accept {
+            background: #22c55e;
+            &:hover { background: #16a34a; transform: scale(1.1); }
+          }
+
+          &.btn-decline {
+            background: #ef4444;
+            &:hover { background: #dc2626; transform: scale(1.1); }
+          }
+        }
+      }
+    }
+  }
+
+  // ─── FIN DES NOTIFICATIONS ────────────────────────────────
+
+  // Lien profil avec avatar et username
   .header-profile-link {
     display: flex;
     align-items: center;
@@ -109,7 +269,7 @@
     }
   }
 
-  // Nouveau : bouton login bleu (remplace .header-text-button avec border noire)
+  // Bouton login bleu
   .header-login-btn {
     padding: 0.45rem 1.2rem;
     border: none;
@@ -127,7 +287,7 @@
     }
   }
 
-  // Nouveau : bouton logout transparent avec bordure subtile
+  // Bouton logout transparent
   .header-logout-btn {
     padding: 0.45rem 1rem;
     border: 1px solid rgba(255, 255, 255, 0.15);

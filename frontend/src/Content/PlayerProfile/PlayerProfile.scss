@@ -3,25 +3,36 @@
 .profile-container {
   display: flex;
   justify-content: center;
-  align-items: center; // Centre la carte verticalement si nécessaire
+  align-items: flex-start;
   width: 100%;
   padding: 2rem 1rem;
   min-height: 100vh;
 }
 
 .profile-card {
-  width: min(40rem, 100%); // Un peu plus étroit que le leaderboard pour un look "fiche"
+  width: min(50rem, 100%); // Assez large pour que l'historique respire
   padding: 2.5rem;
   border: 2px solid rgba(255, 255, 255, 0.1);
   border-radius: 1.5rem;
   background: #1a1a2e;
   color: #e0e0e0;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+
+  h2 {
+    margin: 2rem 0 1rem;
+    font-size: 1.2rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 0.5rem;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
 }
 
+// ── Header (Statique, sans édition) ────────
 .profile-header {
   display: flex;
-  flex-direction: column; // On empile pour un profil centré
+  flex-direction: column; 
   align-items: center;
   gap: 1.5rem;
   margin-bottom: 3rem;
@@ -32,9 +43,10 @@
     width: 8rem;
     height: 8rem;
     border-radius: 50%;
-    border: 4px solid #c9a84c; // Rappel de la couleur "or" du leaderboard
+    border: 4px solid #c9a84c; // Bordure dorée pour le profil public
     padding: 4px;
     background: rgba(255, 255, 255, 0.05);
+    overflow: hidden;
 
     .profile-avatar {
       width: 100%;
@@ -58,64 +70,159 @@
   }
 
   .profile-info {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+
     .profile-username {
       margin: 0;
       font-size: 2.2rem;
       color: #fff;
       font-weight: 800;
-      letter-spacing: -0.5px;
-    }
-
-    .profile-status {
-      margin-top: 0.5rem;
-      font-size: 1rem;
-      color: rgba(255, 255, 255, 0.5);
-      text-transform: uppercase;
-      letter-spacing: 1px;
     }
   }
 }
 
-//  Statistiques 
+// ── Bouton Ajouter en ami (Mis à jour avec tous les états) ──
+.profile-actions {
+  .add-friend-btn {
+    padding: 0.6rem 1.5rem;
+    border-radius: 0.8rem;
+    border: 2px solid transparent; // Pour éviter que le bouton saute quand on ajoute une bordure
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #3b82f6; 
+    color: white;
+
+    // État de base (cliquable)
+    &:hover:not(:disabled) {
+      background: #2563eb;
+      transform: scale(1.05);
+    }
+
+    // On s'assure que le curseur change sur tous les états non-cliquables
+    &:disabled {
+      cursor: default;
+    }
+
+    // 1. Déjà amis
+    &.friends {
+      background: rgba(255, 255, 255, 0.05); // Fond à peine visible
+      backdrop-filter: blur(12px); // LA MAGIE DU VERRE : Floute ce qu'il y a derrière
+      -webkit-backdrop-filter: blur(12px); // Compatibilité pour Safari
+      
+      // La bordure asymétrique fait tout le réalisme du verre (reflet de lumière en haut)
+      border: 1px solid rgba(255, 255, 255, 0.1); 
+      border-top: 1px solid rgba(255, 255, 255, 0.25); 
+      border-left: 1px solid rgba(255, 255, 255, 0.15);
+      
+      color: #4ade80; // Un beau vert tendre
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2); // Ombre portée pour décoller le badge du fond
+      
+      // Optionnel : petite lueur très subtile sur le texte
+      text-shadow: 0 0 10px rgba(74, 222, 128, 0.2); 
+    }
+
+    // 2. Demande en attente (Envoyée OU Reçue)
+    &.sent, &.received {
+      background: transparent;
+      border-color: #a0a0b8; // Gris
+      color: #a0a0b8;
+    }
+
+    // 3. En cours de chargement/envoi
+    &.sending {
+      background: #6b7280;
+      opacity: 0.8;
+    }
+  }
+}
+
+// ── Statistiques ──────────────────────────────────────────
 
 .profile-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 1.5rem;
   
   .stat-box {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 1.5rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    justify-content: center;
+    padding: 1.5rem 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.1);
     border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    text-align: center;
     transition: transform 0.2s ease, border-color 0.2s ease;
 
     &:hover {
       transform: translateY(-5px);
-      border-color: #c9a84c;
+      border-color: #c9a84c; // Animation dorée conservée
     }
 
     .stat-value {
       font-size: 1.8rem;
-      font-weight: 800;
+      font-weight: 700;
       color: #fff;
+      margin-bottom: 0.5rem;
     }
 
     .stat-label {
-      margin-top: 0.3rem;
-      font-size: 0.8rem;
-      color: rgba(255, 255, 255, 0.4);
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.5);
       text-transform: uppercase;
-      font-weight: 600;
     }
   }
 }
 
-@media (max-width: 600px) {
-  .profile-stats {
-    grid-template-columns: 1fr; // On passe en colonne sur mobile
+// ── Historique des parties ──────────────────────────────
+.game-history {
+  margin-top: 2rem;
+
+  .history-list {
+    display: grid;
+    gap: 0.75rem;
   }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.8rem 1.2rem;
+    border-radius: 0.8rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+
+    &--win { border-left: 4px solid #22c55e; }
+    &--loss { border-left: 4px solid #ef4444; }
+
+    .history-result {
+      font-weight: 800;
+      color: #fff;
+      width: 5rem;
+    }
+
+    .history-details {
+      display: flex;
+      gap: 1.5rem;
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .history-date {
+      margin-left: auto;
+      font-size: 0.8rem;
+    }
+  }
+}
+
+.profile-error {
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
 }
