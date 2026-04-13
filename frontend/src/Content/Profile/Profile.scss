@@ -1,5 +1,23 @@
 @use '/src/_colors.scss' as colors;
 
+// Barre de progression pour l'upload d'avatar
+.upload-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #aaa;
+
+  &-bar {
+    height: 6px;
+    background: #7c6af7;
+    border-radius: 3px;
+    transition: width 0.2s ease;
+    flex: 1;
+  }
+}
+
 .profile-container {
   display: flex;
   justify-content: center;
