@@ -6,10 +6,10 @@ const authenticate = require("../middleware/auth");
 //  POST /game  Créer une nouvelle partie 
 router.post("/", authenticate, async (req, res) => {
   try {
-    const { playerCount, playerColor } = req.body;
+    const { playerColor } = req.body;
 
-    if (!playerCount || !playerColor) {
-      return res.status(400).json({ error: "playerCount et playerColor requis" });
+    if (!playerColor) {
+      return res.status(400).json({ error: "playerColor requis" });
     }
 
     // Crée la partie et le premier joueur en une seule transaction Prisma (nested create)
@@ -58,7 +58,8 @@ router.post("/:id/finish", authenticate, async (req, res) => {
       return res.status(400).json({ error: "Partie déjà terminée" });
     }
 
-    // Détermine si le user connecté est le gagnant en comparant sa couleur avec winnerColor
+    // Cherche le vrai gagnant parmi les joueurs de la partie
+    const winnerPlayer = game.players.find((p) => p.color === winnerColor);
     const userPlayer = game.players.find((p) => p.userId === req.userId);
     const isWinner = userPlayer && userPlayer.color === winnerColor;
 
@@ -67,7 +68,7 @@ router.post("/:id/finish", authenticate, async (req, res) => {
       where: { id },
       data: {
         status: "finished",
-        winnerId: isWinner ? req.userId : null,
+        winnerId: winnerPlayer ? winnerPlayer.userId : null,
         finishedAt: new Date(),
       },
     });

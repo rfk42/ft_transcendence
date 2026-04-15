@@ -76,7 +76,7 @@ router.get("/files/:filename", authenticate, (req, res) => {
   }
 
   // Vérifie que le fichier appartient bien au user (le nom commence par son userId)
-  if (!safeName.startsWith(req.userId)) {
+  if (!safeName.startsWith(`${req.userId}-`)) {
     return res.status(403).json({ error: "Accès non autorisé" })
   }
 
@@ -94,7 +94,7 @@ router.delete("/files/:filename", authenticate, (req, res) => {
   }
 
   // Seul le propriétaire peut supprimer
-  if (!safeName.startsWith(req.userId)) {
+  if (!safeName.startsWith(`${req.userId}-`)) {
     return res.status(403).json({ error: "Accès non autorisé" })
   }
 
@@ -108,7 +108,7 @@ router.delete("/files/:filename", authenticate, (req, res) => {
 router.get("/my-files", authenticate, (req, res) => {
   try {
     const files = fs.readdirSync(FILES_DIR)
-      .filter((f) => f.startsWith(req.userId))
+      .filter((f) => f.startsWith(`${req.userId}-`))
       .map((f) => {
         const stat = fs.statSync(path.join(FILES_DIR, f))
         return {

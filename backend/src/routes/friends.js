@@ -66,12 +66,7 @@ router.get("/", authenticate, async (req, res) => {
       .filter((r) => r.status === "pending")
       .map((r) => ({ ...formatUser(r.user), relationId: r.id }))
 
-    // Utilisateurs bloqués (que j'ai bloqués)
-    const blocked = sent
-      .filter((r) => r.status === "blocked")
-      .map((r) => ({ ...formatUser(r.friend), relationId: r.id }))
-
-    res.json({ friends, pendingSent, pendingReceived, blocked })
+    res.json({ friends, pendingSent, pendingReceived })
   } catch (err) {
     console.error("Erreur GET /friends:", err)
     res.status(500).json({ error: "Erreur serveur" })

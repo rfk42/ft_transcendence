@@ -8,6 +8,7 @@ const prisma = require("../db")
 const authenticate = require("../middleware/auth")
 
 const router = express.Router()
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://localhost:8443"
 
 //  Configuration Multer (upload avatar) 
 // Répertoire de destination des fichiers uploadés (configurable via env)
@@ -147,10 +148,10 @@ router.get("/google/callback", async (req, res) => {
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "7d" })
 
     // Redirige vers le frontend avec le token
-    res.redirect(`https://localhost:8443/oauth/callback?token=${token}`)
+    res.redirect(`${FRONTEND_URL}/oauth/callback?token=${token}`)
   } catch (err) {
     console.error("Google OAuth error:", err)
-    res.redirect(`https://localhost:8443/login?error=oauth_failed`)
+    res.redirect(`${FRONTEND_URL}/login?error=oauth_failed`)
   }
 })
 
@@ -232,10 +233,10 @@ router.get("/42/callback", async (req, res) => {
     }
 
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "7d" })
-    res.redirect(`https://localhost:8443/oauth/callback?token=${token}`)
+    res.redirect(`${FRONTEND_URL}/oauth/callback?token=${token}`)
   } catch (err) {
     console.error("42 OAuth error:", err)
-    res.redirect(`https://localhost:8443/login?error=oauth_failed`)
+    res.redirect(`${FRONTEND_URL}/login?error=oauth_failed`)
   }
 })
 
@@ -297,25 +298,18 @@ router.get("/me", authenticate, async (req, res) => {
 //  PATCH /auth/me — modifier le profil 
 router.patch("/me", authenticate, async (req, res) => {
   const { username } = req.body
-  const updateData = {}
 
-  // Username (optionnel mais validé si présent)
-  if (username !== undefined) {
-    if (typeof username !== "string")
-      return res.status(400).json({ error: "Nom d'utilisateur invalide" })
-    const trimmed = username.trim()
-    if (trimmed.length < USERNAME_MIN || trimmed.length > USERNAME_MAX)
-      return res.status(400).json({ error: `Le nom d'utilisateur doit faire entre ${USERNAME_MIN} et ${USERNAME_MAX} caractères` })
-    updateData.username = trimmed
-  }
+  if (!username || typeof username !== "string")
+    return res.status(400).json({ error: "Nom d'utilisateur requis" })
 
-  if (Object.keys(updateData).length === 0)
-    return res.status(400).json({ error: "Aucune donnée à mettre à jour" })
+  const trimmed = username.trim()
+  if (trimmed.length < USERNAME_MIN || trimmed.length > USERNAME_MAX)
+    return res.status(400).json({ error: `Le nom d'utilisateur doit faire entre ${USERNAME_MIN} et ${USERNAME_MAX} caractères` })
 
   try {
     const user = await prisma.user.update({
       where: { id: req.userId },
-      data: updateData,
+      data: { username: trimmed },
     })
     res.json({ user: sanitizeUser(user) })
   } catch (err) {
