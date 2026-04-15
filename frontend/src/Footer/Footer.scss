@@ -1,9 +1,81 @@
-@use '../colors';
+.main-footer {
+  margin-top: auto; 
+  padding: 2.5rem 2rem 1rem;
+  
+  // LE FOND : Le bleu nuit exact de ton header
+  background: #1a1a2e; 
+  
+  // LE TEXTE : Le blanc de ton header
+  color: #e0e0e0;
 
-.footer-container {
-  display: flex;
-  background: colors.$white;
-  height: 10rem;
-  width: 100%;
-  border-top: 3px solid colors.$black;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+
+  .footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2rem;
+
+    .footer-brand {
+      h3 {
+        margin: 0 0 0.5rem;
+        font-size: 1.5rem;
+        font-weight: 800;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        
+        color: #e0e0e0;
+      }
+      
+      p {
+        margin: 0;
+        font-size: 0.9rem;
+        opacity: 0.7;
+      }
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 2rem;
+
+      a {
+        color: #e0e0e0; // Liens en blanc par défaut
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        font-size: 0.95rem;
+
+        &:hover {
+          color: #c9a84c; // Devient doré au survol
+          transform: translateY(-2px);
+        }
+      }
+    }
+  }
+
+  .footer-bottom {
+    max-width: 1200px;
+    margin: 2rem auto 0;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    text-align: center;
+    font-size: 0.8rem;
+    opacity: 0.5;
+  }
+}
+
+// Mobile responsiveness
+@media (max-width: 600px) {
+  .main-footer .footer-content {
+    flex-direction: column;
+    text-align: center;
+    
+    .footer-links {
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+  }
 }

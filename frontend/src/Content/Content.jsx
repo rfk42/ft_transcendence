@@ -5,6 +5,7 @@ import Profile from './Profile/Profile.jsx'
 import ProfilePlayer from './PlayerProfile/PlayerProfile.jsx'
 import Leaderboard from './Leaderboard/Leaderboard.jsx'
 import Friends from './Friends/Friends.jsx'
+import Legal from './Legal/Legal.jsx'
 import ProtectedRoute from '../components/ProtectedRoute.jsx'
 import './Content.scss'
 import { Link, Route, Routes } from 'react-router'
@@ -36,6 +37,7 @@ const Content = () => (
       <Route path="/leaderboard" element={<Leaderboard />} />
       <Route path="/profile/:id" element={<ProfilePlayer />} />
       <Route path="/friends" element={<Friends />} />
+      <Route path="/legal" element={<Legal />} />
     </Routes>
   </section>
 )

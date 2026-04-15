@@ -6,38 +6,38 @@ import './AuthForm.scss'
 
 const AUTH_CONTENT = {
   login: {
-    title: 'Se connecter',
-    subtitle: 'Connecte-toi pour jouer avec tes amis !',
-    submitLabel: 'Se connecter',
-    switchLabel: 'Pas encore de compte ?',
-    switchLinkLabel: 'Creer un compte',
+    title: 'Login',
+    subtitle: 'Log in to play with your friends ',
+    submitLabel: 'Sign in',
+    switchLabel: 'New to LudoTime ?',
+    switchLinkLabel: 'Create an account',
     switchTo: '/register',
     fields: [
       {
         id: 'username',
-        label: "Nom d'utilisateur",
+        label: "Username",
         type: 'text',
         placeholder: 'KingLudo',
       },
       {
         id: 'password',
-        label: 'Mot de passe',
+        label: 'Password',
         type: 'password',
         placeholder: '••••••••',
       },
     ],
   },
   register: {
-    title: 'Créer un compte',
-    subtitle: 'Cree ton compte pour rejoindre Ludo Time !',
-    submitLabel: 'Creer le compte',
-    switchLabel: 'Deja inscrit ?',
-    switchLinkLabel: 'Se connecter',
+    title: 'Create your LudoTime account',
+    subtitle: 'Create an account to join Ludo Time !',
+    submitLabel: 'Create an account',
+    switchLabel: 'Already registered ?',
+    switchLinkLabel: 'Sign in',
     switchTo: '/login',
     fields: [
       {
         id: 'username',
-        label: "Nom d'utilisateur",
+        label: "Username",
         type: 'text',
         placeholder: 'KingLudo',
       },
@@ -49,13 +49,13 @@ const AUTH_CONTENT = {
       },
       {
         id: 'password',
-        label: 'Mot de passe',
+        label: 'Password',
         type: 'password',
         placeholder: '••••••••',
       },
       {
         id: 'confirmPassword',
-        label: 'Confirmation du mot de passe',
+        label: 'Confirm your password',
         type: 'password',
         placeholder: '••••••••',
       },
@@ -193,12 +193,12 @@ const AuthForm = ({ mode = 'login' }) => {
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
           </svg>
-          Se connecter avec Google
+          Sign in with Google
         </a>
 
         <a href="/api/auth/42" className="auth-42-btn">
           <Logo42 width={20} />
-          Se connecter avec 42
+          Sign in with 42
         </a>
       </div>
     </section>

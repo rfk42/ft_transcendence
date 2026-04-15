@@ -1,0 +1,56 @@
+.legal-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  padding: 2rem 1rem;
+  min-height: 100vh;
+}
+
+.legal-card {
+  width: min(50rem, 100%);
+  padding: 3rem;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.5rem;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+
+  h1 {
+    text-align: center;
+    font-size: 2.5rem;
+    color: #fff;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 1rem;
+  }
+
+  h2 {
+    font-size: 1.3rem;
+    color: #3b82f6; // Le bleu de ton site pour les sous-titres
+    margin: 2rem 0 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  p {
+    line-height: 1.6;
+    margin-bottom: 0.8rem;
+    color: #a0a0b8;
+
+    strong {
+      color: #fff;
+    }
+  }
+
+  a {
+    color: #c9a84c; // Le doré de ton site pour les liens (OVH / Email)
+    text-decoration: none;
+    transition: color 0.2s;
+
+    &:hover {
+      text-decoration: underline;
+      color: #fff;
+    }
+  }
+}
