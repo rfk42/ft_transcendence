@@ -1,4 +1,5 @@
 const PLAYER_ORDER = ["blue", "red", "green", "yellow"];
+const TRACK_LENGTH = 36;
 const MAIN_TRACK_STEPS = 35;
 const HOME_LENGTH = 3;
 const FINISH_PROGRESS = MAIN_TRACK_STEPS + HOME_LENGTH;
@@ -58,7 +59,7 @@ const getTrackIndex = (pawn) => {
     return null;
   }
 
-  return (TRACK_START_INDEX[pawn.color] + pawn.progress) % MAIN_TRACK_STEPS;
+  return (TRACK_START_INDEX[pawn.color] + pawn.progress) % TRACK_LENGTH;
 };
 
 const sendOpponentsHome = (
