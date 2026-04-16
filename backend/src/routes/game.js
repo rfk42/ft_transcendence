@@ -2,8 +2,110 @@ const express = require("express");
 const router = express.Router();
 const prisma = require("../db");
 const authenticate = require("../middleware/auth");
+const {
+  createRoom,
+  getRoom,
+  getRoomPublicState,
+  joinRoom,
+  rollDice,
+  movePawn,
+} = require("../roomsStore");
 
-//  POST /game  Créer une nouvelle partie 
+router.post("/rooms", authenticate, async (req, res) => {
+  try {
+    const playerCount = Number(req.body.playerCount) || 2;
+
+    if (![2, 3, 4].includes(playerCount)) {
+      return res.status(400).json({ error: "playerCount doit etre 2, 3 ou 4" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { id: true, username: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "Utilisateur introuvable" });
+    }
+
+    const room = createRoom({
+      userId: user.id,
+      username: user.username,
+      playerCount,
+    });
+
+    res.json({ room: getRoomPublicState(room, user.id) });
+  } catch (err) {
+    console.error("Erreur creation room:", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+router.post("/rooms/:code/join", authenticate, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { id: true, username: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "Utilisateur introuvable" });
+    }
+
+    const result = joinRoom({
+      code: req.params.code,
+      userId: user.id,
+      username: user.username,
+    });
+
+    if (result.error) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.json({ room: getRoomPublicState(result.room, user.id) });
+  } catch (err) {
+    console.error("Erreur join room:", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+router.get("/rooms/:code", authenticate, (req, res) => {
+  const room = getRoom(req.params.code);
+
+  if (!room) {
+    return res.status(404).json({ error: "Room introuvable" });
+  }
+
+  res.json({ room: getRoomPublicState(room, req.userId) });
+});
+
+router.post("/rooms/:code/roll", authenticate, (req, res) => {
+  const result = rollDice({
+    code: req.params.code,
+    userId: req.userId,
+  });
+
+  if (result.error) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  res.json({ room: getRoomPublicState(result.room, req.userId) });
+});
+
+router.post("/rooms/:code/move", authenticate, (req, res) => {
+  const result = movePawn({
+    code: req.params.code,
+    userId: req.userId,
+    pawnId: req.body.pawnId,
+  });
+
+  if (result.error) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  res.json({ room: getRoomPublicState(result.room, req.userId) });
+});
+
 router.post("/", authenticate, async (req, res) => {
   try {
     const { playerColor } = req.body;
@@ -12,7 +114,6 @@ router.post("/", authenticate, async (req, res) => {
       return res.status(400).json({ error: "playerColor requis" });
     }
 
-    // Crée la partie et le premier joueur en une seule transaction Prisma (nested create)
     const game = await prisma.game.create({
       data: {
         status: "playing",
@@ -29,12 +130,11 @@ router.post("/", authenticate, async (req, res) => {
 
     res.json({ game });
   } catch (err) {
-    console.error("Erreur création partie:", err);
+    console.error("Erreur creation partie:", err);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
-//  POST /game/:id/finish  Enregistrer la fin d'une partie 
 router.post("/:id/finish", authenticate, async (req, res) => {
   try {
     const { id } = req.params;
@@ -44,7 +144,6 @@ router.post("/:id/finish", authenticate, async (req, res) => {
       return res.status(400).json({ error: "winnerColor et players requis" });
     }
 
-    // Vérifier que la partie existe
     const game = await prisma.game.findUnique({
       where: { id },
       include: { players: true },
@@ -55,15 +154,13 @@ router.post("/:id/finish", authenticate, async (req, res) => {
     }
 
     if (game.status === "finished") {
-      return res.status(400).json({ error: "Partie déjà terminée" });
+      return res.status(400).json({ error: "Partie deja terminee" });
     }
 
-    // Cherche le vrai gagnant parmi les joueurs de la partie
-    const winnerPlayer = game.players.find((p) => p.color === winnerColor);
-    const userPlayer = game.players.find((p) => p.userId === req.userId);
+    const winnerPlayer = game.players.find((player) => player.color === winnerColor);
+    const userPlayer = game.players.find((player) => player.userId === req.userId);
     const isWinner = userPlayer && userPlayer.color === winnerColor;
 
-    // Mettre à jour la partie
     const updatedGame = await prisma.game.update({
       where: { id },
       data: {
@@ -73,7 +170,6 @@ router.post("/:id/finish", authenticate, async (req, res) => {
       },
     });
 
-    // Sauvegarde les données détaillées de la partie (joueurs, durée, coups)
     await prisma.matchHistory.create({
       data: {
         gameId: id,
@@ -83,17 +179,14 @@ router.post("/:id/finish", authenticate, async (req, res) => {
       },
     });
 
-    // Met à jour (ou crée) les stats du user : wins, losses, winRate, durée moyenne
     const currentStats = await prisma.userStats.findUnique({
       where: { userId: req.userId },
     });
 
     if (currentStats) {
-      // Recalcule toutes les stats de manière incrémentale
       const newGamesPlayed = currentStats.totalGamesPlayed + 1;
       const newGamesWon = currentStats.gamesWon + (isWinner ? 1 : 0);
       const newGamesLost = currentStats.gamesLost + (isWinner ? 0 : 1);
-      // Winrate en % arrondi à 2 décimales
       const newWinRate = newGamesPlayed > 0 ? (newGamesWon / newGamesPlayed) * 100 : 0;
 
       await prisma.userStats.update({
@@ -104,7 +197,6 @@ router.post("/:id/finish", authenticate, async (req, res) => {
           gamesLost: newGamesLost,
           winRate: Math.round(newWinRate * 100) / 100,
           totalMoves: currentStats.totalMoves + (totalMoves || 0),
-          // Moyenne pondérée : (ancienne_moyenne * nb_parties_précédentes + durée) / nb_total
           averageGameDuration: Math.round(
             ((currentStats.averageGameDuration * currentStats.totalGamesPlayed) + (duration || 0)) / newGamesPlayed
           ),
@@ -131,7 +223,6 @@ router.post("/:id/finish", authenticate, async (req, res) => {
   }
 });
 
-//  GET /game/stats/me  Récupérer les stats du user connecté 
 router.get("/stats/me", authenticate, async (req, res) => {
   try {
     let stats = await prisma.userStats.findUnique({
@@ -139,7 +230,6 @@ router.get("/stats/me", authenticate, async (req, res) => {
     });
 
     if (!stats) {
-      // Retourne des stats vides si le user n'a jamais joué
       stats = {
         totalGamesPlayed: 0,
         gamesWon: 0,
@@ -153,15 +243,13 @@ router.get("/stats/me", authenticate, async (req, res) => {
 
     res.json({ stats });
   } catch (err) {
-    console.error("Erreur récupération stats:", err);
+    console.error("Erreur recuperation stats:", err);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
-// GET /game/history  Récupérer l'historique des parties du user
 router.get("/history", authenticate, async (req, res) => {
   try {
-    // Récupère les 20 dernières parties finies auxquelles le user a participé
     const games = await prisma.game.findMany({
       where: {
         status: "finished",
@@ -182,9 +270,8 @@ router.get("/history", authenticate, async (req, res) => {
       take: 20,
     });
 
-    // Transforme les données brutes en un format simplifié pour le frontend
     const history = games.map((game) => {
-      const userPlayer = game.players.find((p) => p.userId === req.userId);
+      const userPlayer = game.players.find((player) => player.userId === req.userId);
       return {
         id: game.id,
         date: game.finishedAt || game.createdAt,
@@ -198,15 +285,13 @@ router.get("/history", authenticate, async (req, res) => {
 
     res.json({ history });
   } catch (err) {
-    console.error("Erreur récupération historique:", err);
+    console.error("Erreur recuperation historique:", err);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
-//  GET /game/leaderboard  Classement global 
 router.get("/leaderboard", async (req, res) => {
   try {
-    // Classement par nombre de victoires, limité aux joueurs ayant au moins 1 partie
     const stats = await prisma.userStats.findMany({
       where: { totalGamesPlayed: { gt: 0 } },
       orderBy: { gamesWon: "desc" },
@@ -222,16 +307,15 @@ router.get("/leaderboard", async (req, res) => {
       },
     });
 
-    // Aplatit les données stats + user en un objet avec rang calculé par position dans le tri
-    const leaderboard = stats.map((s, index) => ({
+    const leaderboard = stats.map((stat, index) => ({
       rank: index + 1,
-      id: s.user.id,
-      username: s.user.username,
-      avatarUrl: s.user.avatarUrl,
-      wins: s.gamesWon,
-      losses: s.gamesLost,
-      gamesPlayed: s.totalGamesPlayed,
-      winRate: s.winRate,
+      id: stat.user.id,
+      username: stat.user.username,
+      avatarUrl: stat.user.avatarUrl,
+      wins: stat.gamesWon,
+      losses: stat.gamesLost,
+      gamesPlayed: stat.totalGamesPlayed,
+      winRate: stat.winRate,
     }));
 
     res.json({ leaderboard });
@@ -241,7 +325,6 @@ router.get("/leaderboard", async (req, res) => {
   }
 });
 
-// Ajout Akim pour PlayerProfile
 router.get("/user/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -272,7 +355,7 @@ router.get("/user/:id", async (req, res) => {
       winRate: stats.winRate,
     });
   } catch (err) {
-    console.error("Erreur récupération profil joueur:", err);
+    console.error("Erreur recuperation profil joueur:", err);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });

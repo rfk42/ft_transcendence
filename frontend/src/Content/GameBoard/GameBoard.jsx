@@ -24,6 +24,7 @@ import { CenterTargets, PawnOverlay, TargetGroup } from './BoardParts.jsx'
 
 const PLAYER_COUNT_OPTIONS = [2, 3, 4]
 const STEP_ANIMATION_MS = 170
+const ROOM_POLL_MS = 1500
 
 const getPlayersForCount = (count) => {
   if (count === 2) {
@@ -56,11 +57,83 @@ const wait = (duration) =>
     window.setTimeout(resolve, duration)
   })
 
+const createRoomRequest = async (token, playerCount) => {
+  const response = await fetch('/api/game/rooms', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ playerCount }),
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Impossible de creer la room')
+  }
+
+  return data.room
+}
+
+const joinRoomRequest = async (token, code) => {
+  const response = await fetch(`/api/game/rooms/${code}/join`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Impossible de rejoindre la room')
+  }
+
+  return data.room
+}
+
+const fetchRoomRequest = async (token, code) => {
+  const response = await fetch(`/api/game/rooms/${code}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Impossible de synchroniser la room')
+  }
+
+  return data.room
+}
+
+const roomActionRequest = async (token, code, action, body = null) => {
+  const response = await fetch(`/api/game/rooms/${code}/${action}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: body ? JSON.stringify(body) : null,
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Action impossible')
+  }
+
+  return data.room
+}
+
 const GameBoard = () => {
   const { user } = useAuth()
   const audioRef = useRef(null)
   const animationRunRef = useRef(0)
   const [playing, setPlaying] = useState(false)
+  const [gameMode, setGameMode] = useState('local')
   const [boardReady, setBoardReady] = useState(false)
   const [playerCount, setPlayerCount] = useState(4)
   const [currentPlayer, setCurrentPlayer] = useState('blue')
@@ -75,11 +148,14 @@ const GameBoard = () => {
   )
   const [animatedPawnsByPlayer, setAnimatedPawnsByPlayer] = useState(null)
   const [animatingPawnId, setAnimatingPawnId] = useState(null)
-
-  //  Tracking pour les stats 
   const [gameId, setGameId] = useState(null)
   const gameStartRef = useRef(null)
+  const [roomCodeInput, setRoomCodeInput] = useState('')
+  const [roomState, setRoomState] = useState(null)
+  const [roomError, setRoomError] = useState('')
+  const [roomBusy, setRoomBusy] = useState(false)
 
+  const isMultiplayer = gameMode === 'multiplayer'
   const activePlayers = getPlayersForCount(playerCount)
   const visiblePawnsByPlayer = animatedPawnsByPlayer ?? pawnsByPlayer
   const pawns = flattenPawns(visiblePawnsByPlayer, activePlayers)
@@ -88,11 +164,35 @@ const GameBoard = () => {
       ? []
       : getMovablePawnIds(pawnsByPlayer, currentPlayer, pendingRoll)
 
-  const finishedCount = (pawnsByPlayer[currentPlayer] ?? []).filter(
+  const displayPlayers = roomState?.activePlayers ?? activePlayers
+  const displayPawnsByPlayer = isMultiplayer
+    ? roomState?.pawnsByPlayer ?? createInitialPawns(displayPlayers)
+    : visiblePawnsByPlayer
+  const displayPawns = flattenPawns(displayPawnsByPlayer, displayPlayers)
+  const displayCurrentPlayer = isMultiplayer
+    ? roomState?.currentPlayer ?? displayPlayers[0]
+    : currentPlayer
+  const displayLastRoll = isMultiplayer ? roomState?.lastRoll : lastRoll
+  const displayPendingRoll = isMultiplayer ? roomState?.pendingRoll : pendingRoll
+  const displayWinner = isMultiplayer ? roomState?.winner : winner
+  const displayStatusMessage = isMultiplayer
+    ? roomState?.statusMessage || 'Cree ou rejoins une room pour jouer.'
+    : statusMessage
+  const displayMovablePawnIds = isMultiplayer
+    ? roomState?.movablePawnIds ?? []
+    : movablePawnIds
+  const myColor = roomState?.me?.color ?? null
+  const canPlayMultiplayer =
+    isMultiplayer &&
+    roomState?.status === 'playing' &&
+    displayWinner === null &&
+    displayCurrentPlayer === myColor &&
+    boardReady
+  const finishedCount = (displayPawnsByPlayer[displayCurrentPlayer] ?? []).filter(
     (pawn) => pawn.progress === FINISH_PROGRESS,
   ).length
 
-  const { boardRef, pawnPositions, registerTarget } = useBoardTargets(pawns)
+  const { boardRef, pawnPositions, registerTarget } = useBoardTargets(displayPawns)
 
   useEffect(() => {
     return () => {
@@ -100,9 +200,56 @@ const GameBoard = () => {
     }
   }, [])
 
-  //  Créer la première partie en DB au montage 
+  const createGameInDB = useCallback(
+    async (playerColor, count) => {
+      if (!user?.token) return null
+      try {
+        const res = await fetch('/api/game', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${user.token}`,
+          },
+          body: JSON.stringify({ playerCount: count, playerColor }),
+        })
+        if (!res.ok) return null
+        const data = await res.json()
+        return data.game?.id || null
+      } catch {
+        return null
+      }
+    },
+    [user],
+  )
+
+  const finishGameInDB = useCallback(
+    async (gId, winnerColor, players) => {
+      if (!user?.token || !gId) return
+      try {
+        const duration = gameStartRef.current
+          ? Math.round((Date.now() - gameStartRef.current) / 1000)
+          : 0
+        await fetch(`/api/game/${gId}/finish`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${user.token}`,
+          },
+          body: JSON.stringify({
+            winnerColor,
+            players,
+            duration,
+          }),
+        })
+      } catch {
+        // ignore silently
+      }
+    },
+    [user],
+  )
+
   useEffect(() => {
-    if (!user?.token) return
+    if (!user?.token || isMultiplayer) return
     const initGame = async () => {
       const players = getPlayersForCount(playerCount)
       const id = await createGameInDB(players[0], playerCount)
@@ -110,7 +257,7 @@ const GameBoard = () => {
       gameStartRef.current = Date.now()
     }
     initGame()
-  }, [])
+  }, [createGameInDB, isMultiplayer, playerCount, user])
 
   useEffect(() => {
     const boardNode = boardRef.current
@@ -140,6 +287,36 @@ const GameBoard = () => {
     }
   }, [boardRef])
 
+  useEffect(() => {
+    if (!isMultiplayer || !roomState?.code || !user?.token) {
+      return undefined
+    }
+
+    let active = true
+
+    const syncRoom = async () => {
+      try {
+        const nextRoom = await fetchRoomRequest(user.token, roomState.code)
+        if (active) {
+          setRoomState(nextRoom)
+          setRoomError('')
+        }
+      } catch (error) {
+        if (active) {
+          setRoomError(error.message)
+        }
+      }
+    }
+
+    syncRoom()
+    const intervalId = window.setInterval(syncRoom, ROOM_POLL_MS)
+
+    return () => {
+      active = false
+      window.clearInterval(intervalId)
+    }
+  }, [isMultiplayer, roomState?.code, user])
+
   const toggleMusic = async () => {
     if (!audioRef.current) {
       return
@@ -158,50 +335,6 @@ const GameBoard = () => {
       setPlaying(false)
     }
   }
-
-  //  Créer une partie en DB si connecté 
-  const createGameInDB = useCallback(async (playerColor, count) => {
-    if (!user?.token) return null
-    try {
-      const res = await fetch('/api/game', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.token}`,
-        },
-        body: JSON.stringify({ playerCount: count, playerColor }),
-      })
-      if (!res.ok) return null
-      const data = await res.json()
-      return data.game?.id || null
-    } catch {
-      return null
-    }
-  }, [user])
-
-  //  Enregistrer la fin de partie en DB 
-  const finishGameInDB = useCallback(async (gId, winnerColor, players) => {
-    if (!user?.token || !gId) return
-    try {
-      const duration = gameStartRef.current
-        ? Math.round((Date.now() - gameStartRef.current) / 1000)
-        : 0
-      await fetch(`/api/game/${gId}/finish`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.token}`,
-        },
-        body: JSON.stringify({
-          winnerColor,
-          players,
-          duration,
-        }),
-      })
-    } catch {
-      // silently fail
-    }
-  }, [user])
 
   const startNewGame = async (nextPlayerCount = playerCount) => {
     const nextPlayers = getPlayersForCount(nextPlayerCount)
@@ -222,7 +355,6 @@ const GameBoard = () => {
     )
     setPawnsByPlayer(createInitialPawns(nextPlayers))
 
-    // Créer la partie en DB (le user prend la première couleur)
     const newGameId = await createGameInDB(nextPlayers[0], nextPlayerCount)
     setGameId(newGameId)
   }
@@ -298,7 +430,6 @@ const GameBoard = () => {
       setPendingRoll(null)
       setStatusMessage(`${PLAYER_LABELS[result.winner]} gagne la partie.`)
 
-      // Enregistrer la fin de partie en DB
       const playersData = activePlayers.map((color) => ({
         color,
         isWinner: color === result.winner,
@@ -323,7 +454,70 @@ const GameBoard = () => {
     })
   }
 
+  const handleCreateRoom = async () => {
+    if (!user?.token) {
+      setRoomError('Connecte-toi pour creer une room multijoueur.')
+      return
+    }
+
+    setRoomBusy(true)
+    setRoomError('')
+    try {
+      const room = await createRoomRequest(user.token, playerCount)
+      setRoomState(room)
+      setRoomCodeInput(room.code)
+    } catch (error) {
+      setRoomError(error.message)
+    } finally {
+      setRoomBusy(false)
+    }
+  }
+
+  const handleJoinRoom = async () => {
+    if (!user?.token) {
+      setRoomError('Connecte-toi pour rejoindre une room multijoueur.')
+      return
+    }
+
+    if (!roomCodeInput.trim()) {
+      setRoomError('Entre un code de room.')
+      return
+    }
+
+    setRoomBusy(true)
+    setRoomError('')
+    try {
+      const room = await joinRoomRequest(user.token, roomCodeInput.trim())
+      setRoomState(room)
+      setRoomCodeInput(room.code)
+    } catch (error) {
+      setRoomError(error.message)
+    } finally {
+      setRoomBusy(false)
+    }
+  }
+
   const handleRoll = () => {
+    if (isMultiplayer) {
+      if (!user?.token || !roomState?.code || !canPlayMultiplayer || displayPendingRoll !== null) {
+        return
+      }
+
+      setRoomBusy(true)
+      setRoomError('')
+      roomActionRequest(user.token, roomState.code, 'roll')
+        .then((room) => {
+          setRoomState(room)
+        })
+        .catch((error) => {
+          setRoomError(error.message)
+        })
+        .finally(() => {
+          setRoomBusy(false)
+        })
+      return
+    }
+
     if (winner || pendingRoll !== null || animatingPawnId || !boardReady) {
       return
     }
@@ -358,6 +552,26 @@ const GameBoard = () => {
   }
 
   const handlePawnClick = (pawnId) => {
+    if (isMultiplayer) {
+      if (!user?.token || !roomState?.code || !canPlayMultiplayer || displayPendingRoll === null) {
+        return
+      }
+
+      setRoomBusy(true)
+      setRoomError('')
+      roomActionRequest(user.token, roomState.code, 'move', { pawnId })
+        .then((room) => {
+          setRoomState(room)
+        })
+        .catch((error) => {
+          setRoomError(error.message)
+        })
+        .finally(() => {
+          setRoomBusy(false)
+        })
+      return
+    }
+
     if (
       animatingPawnId ||
       !movablePawnIds.includes(pawnId) ||
@@ -450,22 +664,99 @@ const GameBoard = () => {
 
         {boardReady ? (
           <PawnOverlay
-            pawns={pawns}
+            pawns={displayPawns}
             pawnPositions={pawnPositions}
-            currentPlayer={currentPlayer}
-            movablePawnIds={movablePawnIds}
+            currentPlayer={displayCurrentPlayer}
+            movablePawnIds={displayMovablePawnIds}
             onPawnClick={handlePawnClick}
           />
         ) : null}
       </div>
 
       <div className="game-board-controls">
+        <div className="game-board-controls_actions">
+          <button
+            type="button"
+            onClick={() => setGameMode('local')}
+            disabled={!isMultiplayer}
+          >
+            Solo local
+          </button>
+          <button
+            type="button"
+            onClick={() => setGameMode('multiplayer')}
+            disabled={isMultiplayer}
+          >
+            Multijoueur
+          </button>
+        </div>
+
+        {isMultiplayer ? (
+          <div className="game-board-controls_panel">
+            <p className="game-board-controls_hint">
+              Mode simple par room: creation, code a partager, puis synchronisation automatique.
+            </p>
+            {roomState ? (
+              <>
+                <p className="game-board-controls_hint">
+                  Room: <strong>{roomState.code}</strong>
+                </p>
+                <p className="game-board-controls_hint">
+                  Ta couleur: <strong>{myColor ?? '-'}</strong>
+                </p>
+                <p className="game-board-controls_hint">
+                  Joueurs: <strong>{roomState.players.length}/{roomState.playerCount}</strong>
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="game-board-controls_actions">
+                  {PLAYER_COUNT_OPTIONS.map((count) => (
+                    <button
+                      key={count}
+                      type="button"
+                      onClick={() => setPlayerCount(count)}
+                      disabled={playerCount === count || roomBusy}
+                    >
+                      Room {count} joueurs
+                    </button>
+                  ))}
+                </div>
+                <div className="game-board-controls_actions">
+                  <button type="button" onClick={handleCreateRoom} disabled={roomBusy}>
+                    Creer une room
+                  </button>
+                </div>
+                <label className="game-board-controls_field" htmlFor="room-code">
+                  <span>Code de room</span>
+                  <input
+                    id="room-code"
+                    type="text"
+                    value={roomCodeInput}
+                    onChange={(event) =>
+                      setRoomCodeInput(event.target.value.toUpperCase())
+                    }
+                    placeholder="Ex: A1B2C3"
+                    disabled={roomBusy}
+                  />
+                </label>
+                <div className="game-board-controls_actions">
+                  <button type="button" onClick={handleJoinRoom} disabled={roomBusy}>
+                    Rejoindre
+                  </button>
+                </div>
+              </>
+            )}
+            {roomError ? <p className="game-board-controls_error">{roomError}</p> : null}
+          </div>
+        ) : null}
+
         <div className="game-board-controls_row game-board-controls_row--players">
-          {activePlayers.map((player) => (
+          {displayPlayers.map((player) => (
             <div
               key={player}
               className={`turn-pill turn-pill--${player} ${
-                currentPlayer === player ? 'turn-pill--active' : ''
+                displayCurrentPlayer === player ? 'turn-pill--active' : ''
               }`}
             >
               {PLAYER_LABELS[player]}
@@ -479,7 +770,10 @@ const GameBoard = () => {
               key={count}
               type="button"
               onClick={() => startNewGame(count)}
-              disabled={playerCount === count && !winner && lastRoll === null}
+              disabled={
+                isMultiplayer ||
+                (playerCount === count && !winner && lastRoll === null)
+              }
             >
               {count} joueurs
             </button>
@@ -491,44 +785,61 @@ const GameBoard = () => {
             type="button"
             onClick={handleRoll}
             disabled={
-              winner !== null ||
-              pendingRoll !== null ||
-              animatingPawnId !== null ||
-              !boardReady
+              isMultiplayer
+                ? !canPlayMultiplayer || displayPendingRoll !== null || roomBusy
+                : winner !== null ||
+                  pendingRoll !== null ||
+                  animatingPawnId !== null ||
+                  !boardReady
             }
           >
-            {animatingPawnId ? 'Deplacement...' : 'Lancer le de'}
+            {isMultiplayer
+              ? roomBusy
+                ? 'Synchronisation...'
+                : 'Lancer le de'
+              : animatingPawnId
+                ? 'Deplacement...'
+                : 'Lancer le de'}
           </button>
-          <button type="button" onClick={() => startNewGame(playerCount)}>
+          <button
+            type="button"
+            onClick={() => startNewGame(playerCount)}
+            disabled={isMultiplayer}
+          >
             Nouvelle partie
           </button>
         </div>
 
         <div className="game-board-status">
           <p>
-            Joueurs actifs: <strong>{activePlayers.length}</strong>
+            Mode: <strong>{isMultiplayer ? 'Multijoueur' : 'Local'}</strong>
+          </p>
+          <p>
+            Joueurs actifs: <strong>{displayPlayers.length}</strong>
           </p>
           <p>
             Plateau pret: <strong>{boardReady ? 'Oui' : 'Non'}</strong>
           </p>
           <p>
-            Tour actif: <strong>{PLAYER_LABELS[currentPlayer]}</strong>
+            Tour actif: <strong>{PLAYER_LABELS[displayCurrentPlayer]}</strong>
           </p>
           <p>
-            Dernier de: <strong>{lastRoll ?? '-'}</strong>
+            Dernier de: <strong>{displayLastRoll ?? '-'}</strong>
           </p>
           <p>
-            Pion a choisir: <strong>{pendingRoll ? 'Oui' : 'Non'}</strong>
+            Pion a choisir: <strong>{displayPendingRoll ? 'Oui' : 'Non'}</strong>
           </p>
           <p>
-            Animation en cours:{' '}
-            <strong>{animatingPawnId ? 'Oui' : 'Non'}</strong>
+            Animation en cours: <strong>{isMultiplayer ? 'Non' : animatingPawnId ? 'Oui' : 'Non'}</strong>
+          </p>
+          <p>
+            Ta couleur: <strong>{isMultiplayer ? myColor ?? '-' : '-'}</strong>
           </p>
           <p>
             Pions au centre: <strong>{finishedCount}/4</strong>
           </p>
           <p>
-            Etat: <strong>{statusMessage}</strong>
+            Etat: <strong>{displayStatusMessage}</strong>
           </p>
         </div>
       </div>

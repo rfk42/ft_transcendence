@@ -89,7 +89,7 @@
       }
 
       &--yellow {
-        color: colors.$yellow-A400;
+        color: colors.$yellow-A700;
       }
     }
   }
@@ -105,7 +105,7 @@
     z-index: 6;
 
     svg {
-      fill: colors.$black;
+      fill: black;
       cursor: pointer;
     }
   }
@@ -115,85 +115,100 @@
     justify-content: center;
     height: 32%;
     gap: 1px;
+  }
 
-    &_left {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 32%;
-      background: colors.$blue-A700;
+  .game-board-top_left,
+  .game-board-top_right,
+  .game-board-bottom_left,
+  .game-board-bottom_right {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 32%;
+  }
 
-      &_home {
-        display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        background: colors.$blue-900;
-        border-radius: 0.7rem;
-        width: 80%;
-        height: 80%;
-        align-items: center;
-        align-content: center;
-        gap: 10%;
+  .game-board-top_left {
+    background: colors.$blue-A400;
+  }
 
-        .base-circle {
-          width: 30%;
-          height: 30%;
-          border-radius: 5rem;
-          background: colors.$indigo-900;
-        }
-      }
+  .game-board-top_right {
+    background: colors.$red-A700;
+  }
+
+  .game-board-bottom_left {
+    background: colors.$yellow-A700;
+  }
+
+  .game-board-bottom_right {
+    background: colors.$green-A700;
+  }
+
+  .game-board-top_left_home,
+  .game-board-top_right_home,
+  .game-board-bottom_left_home,
+  .game-board-bottom_right_home {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    border-radius: 0.7rem;
+    width: 80%;
+    height: 80%;
+    align-items: center;
+    align-content: center;
+    gap: 10%;
+
+    .base-circle {
+      width: 30%;
+      height: 30%;
+      border-radius: 5rem;
     }
+  }
 
-    &_center {
-      display: flex;
-      justify-content: space-between;
-      width: 24%;
-      background: rgb(255, 255, 255);
-      gap: 1px;
-      flex-wrap: wrap;
+  .game-board-top_left_home {
+    background: colors.$blue-900;
 
-      .square {
-        width: calc((100% / 3) - 1px);
-        height: calc((100% / 4) - 1px);
-        border: solid 1px #cfcfcf;
-
-        $child-red: 5, 6, 8, 11;
-
-        @each $child in $child-red {
-          &:nth-child(#{$child}) {
-            background: colors.$red-A700;
-            border-color: colors.$red-A700;
-          }
-        }
-      }
+    .base-circle {
+      background: colors.$indigo-900;
     }
+  }
 
-    &_right {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 32%;
-      background: colors.$red-A700;
+  .game-board-top_right_home {
+    background: colors.$red-900;
 
-      &_home {
-        display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        background: colors.$red-900;
-        border-radius: 0.7rem;
-        width: 80%;
-        height: 80%;
-        align-items: center;
-        align-content: center;
-        gap: 10%;
+    .base-circle {
+      background: colors.$red-700;
+    }
+  }
 
-        .base-circle {
-          width: 30%;
-          height: 30%;
-          border-radius: 5rem;
-          background: colors.$red-700;
-        }
-      }
+  .game-board-bottom_left_home {
+    background: colors.$orange-400;
+
+    .base-circle {
+      background: colors.$orange-600;
+    }
+  }
+
+  .game-board-bottom_right_home {
+    background: colors.$green-900;
+
+    .base-circle {
+      background: colors.$green-700;
+    }
+  }
+
+  .game-board-top_center,
+  .game-board-bottom_center {
+    display: flex;
+    justify-content: space-between;
+    width: 24%;
+    background: colors.$white;
+    gap: 1px;
+    flex-wrap: wrap;
+
+    .square {
+      width: calc(33.3333333333% - 1px);
+      height: calc(25% - 1px);
+      border: solid 1px colors.$gray-300;
     }
   }
 
@@ -203,204 +218,84 @@
     height: 24%;
     gap: 1px;
     flex-wrap: wrap;
+  }
 
-    &_left {
-      display: flex;
-      justify-content: space-between;
-      width: 32%;
-      background: rgb(255, 255, 255);
-      gap: 1px;
-      flex-wrap: wrap;
-      align-content: center;
+  .game-board-mid_left,
+  .game-board-mid_right {
+    display: flex;
+    justify-content: space-between;
+    width: 32%;
+    background: colors.$white;
+    gap: 1px;
+    flex-wrap: wrap;
+    align-content: center;
 
-      .square {
-        width: calc((100% / 4) - 1px);
-        height: calc((100% / 3) - 2px);
-        border: solid 1px #cfcfcf;
-
-        $child-blue: 2, 6, 7, 8;
-
-        @each $child in $child-blue {
-          &:nth-child(#{$child}) {
-            background: colors.$blue-A700;
-            border-color: colors.$blue-A700;
-          }
-        }
-      }
-    }
-
-    &_center {
-      position: relative;
-      overflow: hidden;
-      justify-content: center;
-      width: 24%;
-      clip-path: inset(2px 0 2px 0);
-
-      .center-target {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        opacity: 0;
-        pointer-events: none;
-
-        &--blue {
-          left: 30%;
-          top: 46%;
-        }
-
-        &--red {
-          left: 50%;
-          top: 25%;
-        }
-
-        &--green {
-          left: 71%;
-          top: 47%;
-        }
-
-        &--yellow {
-          left: 50%;
-          top: 68%;
-        }
-      }
-
-      &_win-zone {
-        width: 100%;
-        height: 100%;
-        position: absolute;
-        transform: rotate(45deg);
-
-        &:nth-child(1) {
-          left: -70%;
-          background: colors.$blue-A700;
-        }
-
-        &:nth-child(2) {
-          top: -70%;
-          background: colors.$red-A700;
-        }
-
-        &:nth-child(3) {
-          bottom: -70%;
-          background: colors.$yellow-A700;
-        }
-
-        &:nth-child(4) {
-          right: -70%;
-          background: colors.$green-A700;
-        }
-      }
-    }
-
-    &_right {
-      display: flex;
-      justify-content: space-between;
-      width: 32%;
-      background: rgb(255, 255, 255);
-      gap: 1px;
-      flex-wrap: wrap;
-      align-content: center;
-
-      .square {
-        width: calc((100% / 4) - 2px);
-        height: calc((100% / 3) - 2px);
-        border: solid 1px #cfcfcf;
-
-        $child-green: 5, 6, 7, 11;
-
-        @each $child in $child-green {
-          &:nth-child(#{$child}) {
-            background: colors.$green-A700;
-            border-color: colors.$green-A700;
-          }
-        }
-      }
+    .square {
+      width: calc(25% - 1px);
+      height: calc(33.3333333333% - 2px);
+      border: solid 1px colors.$gray-300;
     }
   }
 
-  .game-board-bottom {
-    display: flex;
+  .game-board-mid_center {
+    position: relative;
+    overflow: hidden;
     justify-content: center;
-    height: 32%;
-    gap: 1px;
+    width: 24%;
+    clip-path: inset(2px 0 2px 0);
 
-    &_left {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 32%;
-      background: colors.$yellow-A700;
+    .center-target {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
 
-      &_home {
-        display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        background: colors.$orange-400;
-        border-radius: 0.7rem;
-        width: 80%;
-        height: 80%;
-        align-items: center;
-        align-content: center;
-        gap: 10%;
+      &--blue {
+        left: 30%;
+        top: 46%;
+      }
 
-        .base-circle {
-          width: 30%;
-          height: 30%;
-          border-radius: 5rem;
-          background: colors.$orange-600;
-        }
+      &--red {
+        left: 50%;
+        top: 25%;
+      }
+
+      &--green {
+        left: 71%;
+        top: 47%;
+      }
+
+      &--yellow {
+        left: 50%;
+        top: 68%;
       }
     }
 
-    &_center {
-      display: flex;
-      justify-content: space-between;
-      width: 24%;
-      background: rgb(255, 255, 255);
-      gap: 1px;
-      flex-wrap: wrap;
+    &_win-zone {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      transform: rotate(45deg);
 
-      .square {
-        width: calc((100% / 3) - 2px);
-        height: calc((100% / 4) - 2px);
-        border: solid 1px #cfcfcf;
-
-        $child-yellow: 2, 5, 7, 8;
-
-        @each $child in $child-yellow {
-          &:nth-child(#{$child}) {
-            background: colors.$yellow-A700;
-            border-color: colors.$yellow-A700;
-          }
-        }
+      &:nth-child(1) {
+        left: -70%;
+        background: colors.$blue-A400;
       }
-    }
 
-    &_right {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 32%;
-      background: colors.$green-A700;
+      &:nth-child(2) {
+        top: -70%;
+        background: colors.$red-A700;
+      }
 
-      &_home {
-        display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        background: colors.$green-900;
-        border-radius: 0.7rem;
-        width: 80%;
-        height: 80%;
-        align-items: center;
-        align-content: center;
-        gap: 10%;
+      &:nth-child(3) {
+        bottom: -70%;
+        background: colors.$yellow-A700;
+      }
 
-        .base-circle {
-          width: 30%;
-          height: 30%;
-          border-radius: 5rem;
-          background: colors.$green-700;
-        }
+      &:nth-child(4) {
+        right: -70%;
+        background: colors.$green-A700;
       }
     }
   }
@@ -412,55 +307,88 @@
   flex-direction: column;
   gap: 0.85rem;
   padding: 1rem 1.1rem;
-  border: solid 2px colors.$black;
+  border: solid 2px black;
   border-radius: 1rem;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 16px 26px -20px rgba(0, 0, 0, 0.55);
+}
 
-  &_row,
-  &_actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-  }
+.game-board-controls_row,
+.game-board-controls_actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
 
-  &_actions button {
-    border: solid 2px colors.$black;
-    border-radius: 999px;
-    background: colors.$white;
-    cursor: pointer;
-    font-weight: 700;
-    padding: 0.55rem 1rem;
-    transition:
-      transform 140ms ease,
-      box-shadow 140ms ease,
-      background 140ms ease;
+.game-board-controls_actions button {
+  border: solid 2px black;
+  border-radius: 999px;
+  background: white;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.55rem 1rem;
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease;
+}
 
-    &:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 18px -14px rgba(0, 0, 0, 0.8);
-    }
+.game-board-controls_actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px -14px rgba(0, 0, 0, 0.8);
+}
 
-    &:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-  }
+.game-board-controls_actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.game-board-controls_panel {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border: solid 2px rgba(0, 0, 0, 0.15);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.game-board-controls_field {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 700;
+}
+
+.game-board-controls_field input {
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border: solid 2px rgba(0, 0, 0, 0.15);
+  border-radius: 0.8rem;
+  background: white;
+}
+
+.game-board-controls_hint,
+.game-board-controls_error {
+  margin: 0;
+}
+
+.game-board-controls_error {
+  color: colors.$red-700;
+  font-weight: 700;
 }
 
 .turn-pill {
-  border: solid 2px colors.$black;
+  border: solid 2px black;
   border-radius: 999px;
   padding: 0.45rem 0.95rem;
   font-weight: 700;
-  background: colors.$white;
+  background: white;
 
   &--active {
-    color: colors.$white;
+    color: white;
   }
 
   &--blue.turn-pill--active {
-    background: colors.$blue-A700;
+    background: colors.$blue-A400;
   }
 
   &--red.turn-pill--active {
