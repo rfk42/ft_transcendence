@@ -1,6 +1,7 @@
 const PLAYER_ORDER = ["blue", "red", "green", "yellow"];
-const FINISH_PROGRESS = 57;
-const MAIN_TRACK_STEPS = 36;
+const MAIN_TRACK_STEPS = 35;
+const HOME_LENGTH = 3;
+const FINISH_PROGRESS = MAIN_TRACK_STEPS + HOME_LENGTH;
 const TRACK_START_INDEX = {
   blue: 0,
   red: 9,
@@ -13,13 +14,13 @@ const createInitialPawns = (playerOrder = PLAYER_ORDER) =>
   Object.fromEntries(
     playerOrder.map((color) => [
       color,
-      Array.from({ length: 4 }, (_, index) => ({
+      Array.from({length: 4}, (_, index) => ({
         id: `${color}-${index}`,
         color,
         homeSlot: index,
         progress: -1,
       })),
-    ])
+    ]),
   );
 
 const getPlayersForCount = (count) => {
@@ -60,7 +61,11 @@ const getTrackIndex = (pawn) => {
   return (TRACK_START_INDEX[pawn.color] + pawn.progress) % MAIN_TRACK_STEPS;
 };
 
-const sendOpponentsHome = (pawnsByPlayer, movedPawn, playerOrder = PLAYER_ORDER) => {
+const sendOpponentsHome = (
+  pawnsByPlayer,
+  movedPawn,
+  playerOrder = PLAYER_ORDER,
+) => {
   const movedTrackIndex = getTrackIndex(movedPawn);
 
   if (movedTrackIndex === null || SAFE_TRACK_INDEXES.has(movedTrackIndex)) {
@@ -76,14 +81,19 @@ const sendOpponentsHome = (pawnsByPlayer, movedPawn, playerOrder = PLAYER_ORDER)
         }
 
         return getTrackIndex(pawn) === movedTrackIndex
-          ? { ...pawn, progress: -1 }
+          ? {...pawn, progress: -1}
           : pawn;
       }),
-    ])
+    ]),
   );
 };
 
-const applyPawnMove = (pawnsByPlayer, pawnId, steps, playerOrder = PLAYER_ORDER) => {
+const applyPawnMove = (
+  pawnsByPlayer,
+  pawnId,
+  steps,
+  playerOrder = PLAYER_ORDER,
+) => {
   let movedPawn = null;
 
   const movedState = Object.fromEntries(
@@ -95,10 +105,10 @@ const applyPawnMove = (pawnsByPlayer, pawnId, steps, playerOrder = PLAYER_ORDER)
         }
 
         const nextProgress = pawn.progress < 0 ? 0 : pawn.progress + steps;
-        movedPawn = { ...pawn, progress: nextProgress };
+        movedPawn = {...pawn, progress: nextProgress};
         return movedPawn;
       }),
-    ])
+    ]),
   );
 
   const nextState = sendOpponentsHome(movedState, movedPawn, playerOrder);
@@ -108,7 +118,9 @@ const applyPawnMove = (pawnsByPlayer, pawnId, steps, playerOrder = PLAYER_ORDER)
     movedPawn,
     winner:
       movedPawn &&
-      nextState[movedPawn.color].every((pawn) => pawn.progress === FINISH_PROGRESS)
+      nextState[movedPawn.color].every(
+        (pawn) => pawn.progress === FINISH_PROGRESS,
+      )
         ? movedPawn.color
         : null,
   };

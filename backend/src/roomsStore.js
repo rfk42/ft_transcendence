@@ -29,16 +29,23 @@ const getRoomPublicState = (room, userId = null) => ({
   movablePawnIds:
     room.pendingRoll === null || room.winner
       ? []
-      : getMovablePawnIds(room.pawnsByPlayer, room.currentPlayer, room.pendingRoll),
+      : getMovablePawnIds(
+          room.pawnsByPlayer,
+          room.currentPlayer,
+          room.pendingRoll,
+        ),
 });
 
-const createRoom = ({ userId, username, playerCount }) => {
+const createRoom = ({userId, username, avatarUrl, playerCount}) => {
   const activePlayers = getPlayersForCount(playerCount);
   const room = {
     code: buildRoomCode(),
     playerCount,
     activePlayers,
-    players: [{ userId, username, color: activePlayers[0] }],
+    gameId: null,
+    players: [
+      {userId, username, avatarUrl: avatarUrl ?? null, color: activePlayers[0]},
+    ],
     pawnsByPlayer: createInitialPawns(activePlayers),
     currentPlayer: activePlayers[0],
     lastRoll: null,
@@ -46,129 +53,154 @@ const createRoom = ({ userId, username, playerCount }) => {
     winner: null,
     status: "waiting",
     statusMessage: "Room creee. En attente des joueurs.",
+    totalMoves: 0,
+    createdAt: Date.now(),
+    startedAt: null,
+    statsRecorded: false,
   };
 
   rooms.set(room.code, room);
   return room;
 };
 
-const joinRoom = ({ code, userId, username }) => {
+const joinRoom = ({code, userId, username, avatarUrl}) => {
   const room = getRoom(code);
 
   if (!room) {
-    return { error: "Room introuvable" };
+    return {error: "Room introuvable"};
   }
 
-  const existingPlayer = room.players.find((player) => player.userId === userId);
+  const existingPlayer = room.players.find(
+    (player) => player.userId === userId,
+  );
   if (existingPlayer) {
-    return { room };
+    return {room, joined: false};
   }
 
   if (room.players.length >= room.playerCount) {
-    return { error: "La room est complete" };
+    return {error: "La room est complete"};
   }
 
   const usedColors = new Set(room.players.map((player) => player.color));
   const color = room.activePlayers.find((entry) => !usedColors.has(entry));
 
-  room.players.push({ userId, username, color });
-  room.status = room.players.length === room.playerCount ? "playing" : "waiting";
+  room.players.push({userId, username, avatarUrl: avatarUrl ?? null, color});
+  room.status =
+    room.players.length === room.playerCount ? "playing" : "waiting";
+  if (room.status === "playing" && !room.startedAt) {
+    room.startedAt = Date.now();
+  }
   room.statusMessage =
     room.status === "playing"
       ? `${room.currentPlayer} commence.`
       : `${username} a rejoint la room.`;
 
-  return { room };
+  return {room, joined: true};
 };
 
-const rollDice = ({ code, userId }) => {
+const rollDice = ({code, userId}) => {
   const room = getRoom(code);
 
   if (!room) {
-    return { error: "Room introuvable" };
+    return {error: "Room introuvable"};
   }
 
   const player = room.players.find((entry) => entry.userId === userId);
   if (!player) {
-    return { error: "Tu ne fais pas partie de cette room" };
+    return {error: "Tu ne fais pas partie de cette room"};
   }
 
   if (room.status !== "playing") {
-    return { error: "La partie n'a pas encore commence" };
+    return {error: "La partie n'a pas encore commence"};
   }
 
   if (room.currentPlayer !== player.color) {
-    return { error: "Ce n'est pas ton tour" };
-  }
-
-  if (room.pendingRoll !== null) {
-    return { error: "Choisis un pion avant de relancer" };
+    return {error: "Ce n'est pas ton tour"};
   }
 
   const diceValue = Math.floor(Math.random() * 6) + 1;
-  const movablePawnIds = getMovablePawnIds(room.pawnsByPlayer, room.currentPlayer, diceValue);
+  const movablePawnIds = getMovablePawnIds(
+    room.pawnsByPlayer,
+    room.currentPlayer,
+    diceValue,
+  );
   room.lastRoll = diceValue;
 
   if (movablePawnIds.length === 0) {
     room.currentPlayer = getNextPlayer(room.currentPlayer, room.activePlayers);
     room.statusMessage = `${player.username} a fait ${diceValue}, mais aucun pion ne peut bouger.`;
-    return { room };
+    return {room};
   }
 
   if (movablePawnIds.length === 1) {
-    return movePawn({ code, userId, pawnId: movablePawnIds[0], forcedRoll: diceValue });
+    return movePawn({
+      code,
+      userId,
+      pawnId: movablePawnIds[0],
+      forcedRoll: diceValue,
+    });
   }
 
   room.pendingRoll = diceValue;
   room.statusMessage = `${player.username} a fait ${diceValue}. Choisis un pion.`;
-  return { room };
+  return {room};
 };
 
-const movePawn = ({ code, userId, pawnId, forcedRoll = null }) => {
+const movePawn = ({code, userId, pawnId, forcedRoll = null}) => {
   const room = getRoom(code);
 
   if (!room) {
-    return { error: "Room introuvable" };
+    return {error: "Room introuvable"};
   }
 
   const player = room.players.find((entry) => entry.userId === userId);
   if (!player) {
-    return { error: "Tu ne fais pas partie de cette room" };
+    return {error: "Tu ne fais pas partie de cette room"};
   }
 
   if (room.currentPlayer !== player.color) {
-    return { error: "Ce n'est pas ton tour" };
+    return {error: "Ce n'est pas ton tour"};
   }
 
   const roll = forcedRoll ?? room.pendingRoll;
   if (roll === null) {
-    return { error: "Aucun lancer en attente" };
+    return {error: "Aucun lancer en attente"};
   }
 
-  const movablePawnIds = getMovablePawnIds(room.pawnsByPlayer, room.currentPlayer, roll);
+  const movablePawnIds = getMovablePawnIds(
+    room.pawnsByPlayer,
+    room.currentPlayer,
+    roll,
+  );
   if (!movablePawnIds.includes(pawnId)) {
-    return { error: "Ce pion ne peut pas bouger" };
+    return {error: "Ce pion ne peut pas bouger"};
   }
 
-  const result = applyPawnMove(room.pawnsByPlayer, pawnId, roll, room.activePlayers);
+  const result = applyPawnMove(
+    room.pawnsByPlayer,
+    pawnId,
+    roll,
+    room.activePlayers,
+  );
   room.pawnsByPlayer = result.pawns;
   room.pendingRoll = null;
+  room.totalMoves += 1;
 
   if (result.winner) {
     room.winner = result.winner;
     room.status = "finished";
     room.statusMessage = `${player.username} gagne la partie.`;
-    return { room };
+    return {room};
   }
 
   if (roll === 6) {
     room.statusMessage = `${player.username} rejoue grace au 6.`;
-    return { room };
+    return {room};
   }
 
   room.currentPlayer = getNextPlayer(room.currentPlayer, room.activePlayers);
   room.statusMessage = `Tour termine. ${room.currentPlayer} doit jouer.`;
-  return { room };
+  return {room};
 };
 
 module.exports = {

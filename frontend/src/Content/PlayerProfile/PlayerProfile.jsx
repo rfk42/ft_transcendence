@@ -8,42 +8,42 @@ const PlayerProfile = () => {
   const { user: currentUser } = useAuth()
   const [player, setPlayer] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [friendStatus, setFriendStatus] = useState("none"); // "none", "sending", "sent"
+  const [friendStatus, setFriendStatus] = useState('none') // "none", "sending", "sent"
 
-const handleAddFriend = async () => {
-  try {
-    setFriendStatus("sending");
-    
-    // 1. L'URL n'a plus l'ID à la fin
-    const res = await fetch(`/api/friends/request`, { 
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json', // 2. On précise qu'on envoie du JSON
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      // 3. On envoie le pseudo du joueur qu'on est en train de regarder !
-      body: JSON.stringify({ username: player.username }) 
-    });
+  const handleAddFriend = async () => {
+    try {
+      setFriendStatus('sending')
 
-    if (res.ok) {
-      setFriendStatus("sent");
-    } else {
-      // Optionnel : tu peux lire l'erreur envoyée par ton collègue (ex: "Vous êtes déjà amis")
-      const errorData = await res.json();
-      console.error(errorData.error);
-      setFriendStatus("none");
+      // 1. L'URL n'a plus l'ID à la fin
+      const res = await fetch(`/api/friends/request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json', // 2. On précise qu'on envoie du JSON
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        // 3. On envoie le pseudo du joueur qu'on est en train de regarder !
+        body: JSON.stringify({ username: player.username }),
+      })
+
+      if (res.ok) {
+        setFriendStatus('sent')
+      } else {
+        // Optionnel : tu peux lire l'erreur envoyée par ton collègue (ex: "Vous êtes déjà amis")
+        const errorData = await res.json()
+        console.error(errorData.error)
+        setFriendStatus('none')
+      }
+    } catch (err) {
+      setFriendStatus('none')
+      console.error("Erreur demande d'ami", err)
     }
-  } catch (err) {
-    setFriendStatus("none");
-    console.error("Erreur demande d'ami", err);
   }
-};
 
   useEffect(() => {
     const fetchPlayerData = async () => {
       try {
         setLoading(true)
-        
+
         // 1. ON DEMANDE LES INFOS DE L'ID DE L'URL UNIQUEMENT (Ton code original)
         const resPlayer = await fetch(`/api/game/user/${id}`)
         if (resPlayer.ok) {
@@ -55,26 +55,28 @@ const handleAddFriend = async () => {
         // On le fait seulement si on est connecté et qu'on regarde le profil de quelqu'un d'autre
         if (currentUser && currentUser.id !== id) {
           const resFriends = await fetch('/api/friends', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
           })
-          
+
           if (resFriends.ok) {
             const friendsData = await resFriends.json()
-            
+
             // On fouille dans les listes renvoyées par ton collègue
-            if (friendsData.friends.some(f => f.id === id)) {
-              setFriendStatus("friends")
-            } else if (friendsData.pendingSent.some(f => f.id === id)) {
-              setFriendStatus("sent")
-            } else if (friendsData.pendingReceived.some(f => f.id === id)) {
-              setFriendStatus("received")
+            if (friendsData.friends.some((f) => f.id === id)) {
+              setFriendStatus('friends')
+            } else if (friendsData.pendingSent.some((f) => f.id === id)) {
+              setFriendStatus('sent')
+            } else if (friendsData.pendingReceived.some((f) => f.id === id)) {
+              setFriendStatus('received')
             } else {
-              setFriendStatus("none")
+              setFriendStatus('none')
             }
           }
         }
       } catch (err) {
-        console.error("Erreur lors du fetch", err)
+        console.error('Erreur lors du fetch', err)
       } finally {
         setLoading(false)
       }
@@ -99,23 +101,23 @@ const handleAddFriend = async () => {
               </div>
             )}
           </div>
-          
+
           <div className="profile-info">
             <h1 className="profile-username">{player.username}</h1>
-            
+
             {/* On affiche le bouton uniquement si l'ID du profil est différent de l'ID du compte connecté */}
             {currentUser && currentUser.id !== id && (
               <div className="profile-actions">
-                <button 
+                <button
                   className={`add-friend-btn ${friendStatus}`}
                   onClick={handleAddFriend}
-                  disabled={friendStatus !== "none"}
+                  disabled={friendStatus !== 'none'}
                 >
-                  {friendStatus === "none" && "Ajouter en ami"}
-                  {friendStatus === "sending" && "Envoi..."}
-                  {friendStatus === "sent" && "Demande envoyée"}
-                  {friendStatus === "received" && "Demande reçue"}
-                  {friendStatus === "friends" && "✓ Amis"}
+                  {friendStatus === 'none' && 'Ajouter en ami'}
+                  {friendStatus === 'sending' && 'Envoi...'}
+                  {friendStatus === 'sent' && 'Demande envoyée'}
+                  {friendStatus === 'received' && 'Demande reçue'}
+                  {friendStatus === 'friends' && '✓ Amis'}
                 </button>
               </div>
             )}
@@ -135,9 +137,10 @@ const handleAddFriend = async () => {
 
           <div className="stat-box">
             <span className="stat-value">
-              {player.gamesPlayed > 0 
-                ? Math.round((player.wins / player.gamesPlayed) * 100) 
-                : 0}%
+              {player.gamesPlayed > 0
+                ? Math.round((player.wins / player.gamesPlayed) * 100)
+                : 0}
+              %
             </span>
             <span className="stat-label">Winrate</span>
           </div>

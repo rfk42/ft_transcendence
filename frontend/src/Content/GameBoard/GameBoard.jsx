@@ -1,12 +1,18 @@
 import './GameBoard.scss'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useParams } from 'react-router'
 import { useAuth } from '../../contexts/AuthContext'
+import DiceOne from '../../assets/icons/dice_one.jsx'
+import DiceTwo from '../../assets/icons/dice_two.jsx'
+import DiceThree from '../../assets/icons/dice_three.jsx'
+import DiceFour from '../../assets/icons/dice_four.jsx'
+import DiceFive from '../../assets/icons/dice_five.jsx'
+import DiceSix from '../../assets/icons/dice_six.jsx'
 import MusicOffIcon from '../../assets/icons/MusicOffIcon.jsx'
 import MusicOnIcon from '../../assets/icons/MusicOnIcon.jsx'
 import music from '../../assets/sound/theme.mp3'
 import {
   BASE_CIRCLES,
-  FINISH_PROGRESS,
   PLAYER_LABELS,
   PLAYER_ORDER,
   SEGMENT_SQUARES,
@@ -22,9 +28,18 @@ import {
 import { useBoardTargets } from './useBoardTargets.jsx'
 import { CenterTargets, PawnOverlay, TargetGroup } from './BoardParts.jsx'
 
-const PLAYER_COUNT_OPTIONS = [2, 3, 4]
 const STEP_ANIMATION_MS = 170
 const ROOM_POLL_MS = 1500
+const DICE_ROLL_MIN_MS = 650
+
+const DICE_ICONS = {
+  1: DiceOne,
+  2: DiceTwo,
+  3: DiceThree,
+  4: DiceFour,
+  5: DiceFive,
+  6: DiceSix,
+}
 
 const getPlayersForCount = (count) => {
   if (count === 2) {
@@ -38,7 +53,7 @@ const clonePawnsByPlayer = (pawnsByPlayer, playerOrder) =>
   Object.fromEntries(
     playerOrder.map((color) => [
       color,
-      pawnsByPlayer[color].map((pawn) => ({ ...pawn })),
+      (pawnsByPlayer[color] ?? []).map((pawn) => ({ ...pawn })),
     ]),
   )
 
@@ -46,7 +61,7 @@ const updatePawnProgress = (pawnsByPlayer, pawnId, nextProgress, playerOrder) =>
   Object.fromEntries(
     playerOrder.map((color) => [
       color,
-      pawnsByPlayer[color].map((pawn) =>
+      (pawnsByPlayer[color] ?? []).map((pawn) =>
         pawn.id === pawnId ? { ...pawn, progress: nextProgress } : pawn,
       ),
     ]),
@@ -57,20 +72,51 @@ const wait = (duration) =>
     window.setTimeout(resolve, duration)
   })
 
-const createRoomRequest = async (token, playerCount) => {
-  const response = await fetch('/api/game/rooms', {
-    method: 'POST',
+const getPlayerInitials = (username = '') =>
+  username
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('') || '?'
+
+const findMovedPawnBetweenStates = (previousPawns, nextPawns, playerOrder) => {
+  for (const color of playerOrder) {
+    const previousColorPawns = previousPawns[color] ?? []
+    const nextColorPawns = nextPawns[color] ?? []
+
+    for (const nextPawn of nextColorPawns) {
+      const previousPawn = previousColorPawns.find(
+        (pawn) => pawn.id === nextPawn.id,
+      )
+      if (!previousPawn || previousPawn.progress === nextPawn.progress) {
+        continue
+      }
+
+      if (nextPawn.progress > previousPawn.progress) {
+        return {
+          pawnId: nextPawn.id,
+          fromProgress: previousPawn.progress,
+          toProgress: nextPawn.progress,
+        }
+      }
+    }
+  }
+
+  return null
+}
+
+const fetchRoomRequest = async (token, code) => {
+  const response = await fetch(`/api/game/rooms/${code}`, {
     headers: {
-      'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ playerCount }),
   })
 
   const data = await response.json()
 
   if (!response.ok) {
-    throw new Error(data.error || 'Impossible de creer la room')
+    throw new Error(data.error || 'Impossible de charger la room')
   }
 
   return data.room
@@ -88,22 +134,6 @@ const joinRoomRequest = async (token, code) => {
 
   if (!response.ok) {
     throw new Error(data.error || 'Impossible de rejoindre la room')
-  }
-
-  return data.room
-}
-
-const fetchRoomRequest = async (token, code) => {
-  const response = await fetch(`/api/game/rooms/${code}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-
-  const data = await response.json()
-
-  if (!response.ok) {
-    throw new Error(data.error || 'Impossible de synchroniser la room')
   }
 
   return data.room
@@ -128,12 +158,56 @@ const roomActionRequest = async (token, code, action, body = null) => {
   return data.room
 }
 
-const GameBoard = () => {
+const PlayerBadge = ({ color, player }) => (
+  <div className={`game-board-player game-board-player--${color}`}>
+    {player?.avatarUrl ? (
+      <img
+        src={player.avatarUrl}
+        alt=""
+        className="game-board-player_avatar"
+        referrerPolicy="no-referrer"
+      />
+    ) : (
+      <div className="game-board-player_avatar game-board-player_avatar--fallback">
+        {getPlayerInitials(player?.username)}
+      </div>
+    )}
+    <div className="game-board-player_info">
+      <strong>{player?.username ?? 'En attente'}</strong>
+      <span>{PLAYER_LABELS[color]}</span>
+    </div>
+  </div>
+)
+
+const VictoryOverlay = ({ winnerColor, winnerName }) => (
+  <div className={`game-board-victory game-board-victory--${winnerColor}`}>
+    <div className="game-board-victory_glow" aria-hidden="true"></div>
+    <div className="game-board-victory_burst" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <div className="game-board-victory_card">
+      <p className="game-board-victory_label">Victoire</p>
+      <h2>{winnerName}</h2>
+      <p className="game-board-victory_subtitle">
+        {PLAYER_LABELS[winnerColor]} atteint le centre.
+      </p>
+    </div>
+  </div>
+)
+
+const GameBoard = ({ mode = 'solo' }) => {
   const { user } = useAuth()
+  const { code } = useParams()
   const audioRef = useRef(null)
   const animationRunRef = useRef(0)
+  const roomBusyRef = useRef(false)
+  const isRollingDiceRef = useRef(false)
   const [playing, setPlaying] = useState(false)
-  const [gameMode, setGameMode] = useState('local')
   const [boardReady, setBoardReady] = useState(false)
   const [playerCount, setPlayerCount] = useState(4)
   const [currentPlayer, setCurrentPlayer] = useState('blue')
@@ -150,55 +224,59 @@ const GameBoard = () => {
   const [animatingPawnId, setAnimatingPawnId] = useState(null)
   const [gameId, setGameId] = useState(null)
   const gameStartRef = useRef(null)
-  const [roomCodeInput, setRoomCodeInput] = useState('')
   const [roomState, setRoomState] = useState(null)
-  const [roomError, setRoomError] = useState('')
   const [roomBusy, setRoomBusy] = useState(false)
+  const [roomError, setRoomError] = useState('')
+  const previousRoomStateRef = useRef(null)
+  const diceIntervalRef = useRef(null)
+  const [rollingFace, setRollingFace] = useState(1)
+  const [isRollingDice, setIsRollingDice] = useState(false)
 
-  const isMultiplayer = gameMode === 'multiplayer'
-  const activePlayers = getPlayersForCount(playerCount)
+  const isMultiplayer = mode === 'multi'
+  const activePlayers = isMultiplayer
+    ? (roomState?.activePlayers ?? [])
+    : getPlayersForCount(playerCount)
   const visiblePawnsByPlayer = animatedPawnsByPlayer ?? pawnsByPlayer
-  const pawns = flattenPawns(visiblePawnsByPlayer, activePlayers)
-  const movablePawnIds =
-    pendingRoll === null || winner || animatingPawnId || !boardReady
+  const displayPawnsByPlayer = isMultiplayer
+    ? (animatedPawnsByPlayer ??
+      roomState?.pawnsByPlayer ??
+      createInitialPawns(activePlayers))
+    : visiblePawnsByPlayer
+  const displayPawns = flattenPawns(displayPawnsByPlayer, activePlayers)
+  const displayCurrentPlayer = isMultiplayer
+    ? (roomState?.currentPlayer ?? 'blue')
+    : currentPlayer
+  const displayLastRoll = isMultiplayer ? roomState?.lastRoll : lastRoll
+  const displayPendingRoll = isMultiplayer
+    ? roomState?.pendingRoll
+    : pendingRoll
+  const displayWinner = isMultiplayer ? roomState?.winner : winner
+  const winningPlayer = isMultiplayer
+    ? roomState?.players?.find((player) => player.color === displayWinner)
+    : null
+  const winnerName =
+    winningPlayer?.username ??
+    (displayWinner ? PLAYER_LABELS[displayWinner] : '')
+  const myColor = roomState?.me?.color ?? null
+  const isMyTurn = !isMultiplayer || myColor === displayCurrentPlayer
+  const movablePawnIds = isMultiplayer
+    ? (roomState?.movablePawnIds ?? [])
+    : pendingRoll === null || winner || animatingPawnId || !boardReady
       ? []
       : getMovablePawnIds(pawnsByPlayer, currentPlayer, pendingRoll)
 
-  const displayPlayers = roomState?.activePlayers ?? activePlayers
-  const displayPawnsByPlayer = isMultiplayer
-    ? roomState?.pawnsByPlayer ?? createInitialPawns(displayPlayers)
-    : visiblePawnsByPlayer
-  const displayPawns = flattenPawns(displayPawnsByPlayer, displayPlayers)
-  const displayCurrentPlayer = isMultiplayer
-    ? roomState?.currentPlayer ?? displayPlayers[0]
-    : currentPlayer
-  const displayLastRoll = isMultiplayer ? roomState?.lastRoll : lastRoll
-  const displayPendingRoll = isMultiplayer ? roomState?.pendingRoll : pendingRoll
-  const displayWinner = isMultiplayer ? roomState?.winner : winner
-  const displayStatusMessage = isMultiplayer
-    ? roomState?.statusMessage || 'Cree ou rejoins une room pour jouer.'
-    : statusMessage
-  const displayMovablePawnIds = isMultiplayer
-    ? roomState?.movablePawnIds ?? []
-    : movablePawnIds
-  const myColor = roomState?.me?.color ?? null
-  const canPlayMultiplayer =
-    isMultiplayer &&
-    roomState?.status === 'playing' &&
-    displayWinner === null &&
-    displayCurrentPlayer === myColor &&
-    boardReady
-  const finishedCount = (displayPawnsByPlayer[displayCurrentPlayer] ?? []).filter(
-    (pawn) => pawn.progress === FINISH_PROGRESS,
-  ).length
+  const minimalStatusMessage = displayWinner
+    ? `${PLAYER_LABELS[displayWinner]} a gagne.`
+    : isMultiplayer && roomState?.status === 'waiting'
+      ? `Room ${code} en attente de joueurs`
+      : isMyTurn
+        ? 'A votre tour'
+        : "En attente que l'adversaire joue"
+  const displayedDieValue = isRollingDice ? rollingFace : (displayLastRoll ?? 1)
+  const DisplayedDieIcon = DICE_ICONS[displayedDieValue] ?? DiceOne
 
-  const { boardRef, pawnPositions, registerTarget } = useBoardTargets(displayPawns)
-
-  useEffect(() => {
-    return () => {
-      animationRunRef.current += 1
-    }
-  }, [])
+  const { boardRef, pawnPositions, registerTarget } =
+    useBoardTargets(displayPawns)
 
   const createGameInDB = useCallback(
     async (playerColor, count) => {
@@ -249,15 +327,146 @@ const GameBoard = () => {
   )
 
   useEffect(() => {
-    if (!user?.token || isMultiplayer) return
+    roomBusyRef.current = roomBusy
+  }, [roomBusy])
+
+  useEffect(() => {
+    isRollingDiceRef.current = isRollingDice
+  }, [isRollingDice])
+
+  useEffect(() => {
+    return () => {
+      animationRunRef.current += 1
+      if (diceIntervalRef.current) {
+        window.clearInterval(diceIntervalRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isMultiplayer || !user?.token) return
+
     const initGame = async () => {
       const players = getPlayersForCount(playerCount)
       const id = await createGameInDB(players[0], playerCount)
       setGameId(id)
       gameStartRef.current = Date.now()
     }
+
     initGame()
   }, [createGameInDB, isMultiplayer, playerCount, user])
+
+  useEffect(() => {
+    if (!isMultiplayer || !user?.token || !code) {
+      return undefined
+    }
+
+    let active = true
+
+    const syncRoom = async (shouldJoin = false) => {
+      try {
+        const room = shouldJoin
+          ? await joinRoomRequest(user.token, code)
+          : await fetchRoomRequest(user.token, code)
+
+        if (active) {
+          if (
+            !shouldJoin &&
+            (roomBusyRef.current || isRollingDiceRef.current)
+          ) {
+            return
+          }
+          setRoomState(room)
+          setRoomError('')
+        }
+      } catch (error) {
+        if (active) {
+          setRoomError(error.message)
+        }
+      }
+    }
+
+    syncRoom(true)
+    const intervalId = window.setInterval(() => {
+      syncRoom(false)
+    }, ROOM_POLL_MS)
+
+    return () => {
+      active = false
+      window.clearInterval(intervalId)
+    }
+  }, [code, isMultiplayer, user])
+
+  useEffect(() => {
+    if (!isMultiplayer || !roomState?.pawnsByPlayer) {
+      previousRoomStateRef.current = roomState
+      return
+    }
+
+    const previousRoomState = previousRoomStateRef.current
+    previousRoomStateRef.current = roomState
+
+    if (!previousRoomState?.pawnsByPlayer) {
+      return
+    }
+
+    const movedPawn = findMovedPawnBetweenStates(
+      previousRoomState.pawnsByPlayer,
+      roomState.pawnsByPlayer,
+      roomState.activePlayers ?? [],
+    )
+
+    if (!movedPawn) {
+      return
+    }
+
+    const path = buildMovePath(movedPawn.fromProgress, movedPawn.toProgress)
+    if (path.length === 0) {
+      return
+    }
+
+    const runId = ++animationRunRef.current
+    let nextAnimatedState = clonePawnsByPlayer(
+      previousRoomState.pawnsByPlayer,
+      roomState.activePlayers ?? [],
+    )
+
+    const animateRoomMove = async () => {
+      setAnimatingPawnId(movedPawn.pawnId)
+      setAnimatedPawnsByPlayer(nextAnimatedState)
+
+      for (const progress of path) {
+        if (animationRunRef.current !== runId) {
+          return
+        }
+
+        nextAnimatedState = updatePawnProgress(
+          nextAnimatedState,
+          movedPawn.pawnId,
+          progress,
+          roomState.activePlayers ?? [],
+        )
+        setAnimatedPawnsByPlayer(nextAnimatedState)
+        await wait(STEP_ANIMATION_MS)
+      }
+
+      if (animationRunRef.current !== runId) {
+        return
+      }
+
+      setAnimatedPawnsByPlayer(roomState.pawnsByPlayer)
+      await wait(Math.round(STEP_ANIMATION_MS * 0.8))
+
+      if (animationRunRef.current !== runId) {
+        return
+      }
+
+      setAnimatedPawnsByPlayer(null)
+      setAnimatingPawnId(null)
+    }
+
+    void animateRoomMove()
+  }, [isMultiplayer, roomState])
 
   useEffect(() => {
     const boardNode = boardRef.current
@@ -287,36 +496,6 @@ const GameBoard = () => {
     }
   }, [boardRef])
 
-  useEffect(() => {
-    if (!isMultiplayer || !roomState?.code || !user?.token) {
-      return undefined
-    }
-
-    let active = true
-
-    const syncRoom = async () => {
-      try {
-        const nextRoom = await fetchRoomRequest(user.token, roomState.code)
-        if (active) {
-          setRoomState(nextRoom)
-          setRoomError('')
-        }
-      } catch (error) {
-        if (active) {
-          setRoomError(error.message)
-        }
-      }
-    }
-
-    syncRoom()
-    const intervalId = window.setInterval(syncRoom, ROOM_POLL_MS)
-
-    return () => {
-      active = false
-      window.clearInterval(intervalId)
-    }
-  }, [isMultiplayer, roomState?.code, user])
-
   const toggleMusic = async () => {
     if (!audioRef.current) {
       return
@@ -336,27 +515,38 @@ const GameBoard = () => {
     }
   }
 
-  const startNewGame = async (nextPlayerCount = playerCount) => {
-    const nextPlayers = getPlayersForCount(nextPlayerCount)
+  const startDiceRolling = () => {
+    if (diceIntervalRef.current) {
+      window.clearInterval(diceIntervalRef.current)
+    }
 
-    animationRunRef.current += 1
-    setPlayerCount(nextPlayerCount)
-    setCurrentPlayer(nextPlayers[0])
-    setLastRoll(null)
-    setPendingRoll(null)
-    setWinner(null)
-    setAnimatingPawnId(null)
-    setAnimatedPawnsByPlayer(null)
-    gameStartRef.current = Date.now()
-    setStatusMessage(
-      `Nouvelle partie a ${nextPlayerCount} joueur${
-        nextPlayerCount > 1 ? 's' : ''
-      }. ${PLAYER_LABELS[nextPlayers[0]]} commence.`,
-    )
-    setPawnsByPlayer(createInitialPawns(nextPlayers))
+    setIsRollingDice(true)
+    setRollingFace(1)
 
-    const newGameId = await createGameInDB(nextPlayers[0], nextPlayerCount)
-    setGameId(newGameId)
+    let currentFace = 1
+    diceIntervalRef.current = window.setInterval(() => {
+      currentFace = currentFace === 6 ? 1 : currentFace + 1
+      setRollingFace(currentFace)
+    }, 90)
+
+    return Date.now()
+  }
+
+  const stopDiceRolling = async (finalFace, startedAt) => {
+    const elapsed = Date.now() - startedAt
+    const remaining = Math.max(0, DICE_ROLL_MIN_MS - elapsed)
+
+    if (remaining > 0) {
+      await wait(remaining)
+    }
+
+    if (diceIntervalRef.current) {
+      window.clearInterval(diceIntervalRef.current)
+      diceIntervalRef.current = null
+    }
+
+    setRollingFace(finalFace)
+    setIsRollingDice(false)
   }
 
   const finishTurn = ({ nextPlayer, message, keepPlayer = false }) => {
@@ -454,62 +644,22 @@ const GameBoard = () => {
     })
   }
 
-  const handleCreateRoom = async () => {
-    if (!user?.token) {
-      setRoomError('Connecte-toi pour creer une room multijoueur.')
-      return
-    }
-
-    setRoomBusy(true)
-    setRoomError('')
-    try {
-      const room = await createRoomRequest(user.token, playerCount)
-      setRoomState(room)
-      setRoomCodeInput(room.code)
-    } catch (error) {
-      setRoomError(error.message)
-    } finally {
-      setRoomBusy(false)
-    }
-  }
-
-  const handleJoinRoom = async () => {
-    if (!user?.token) {
-      setRoomError('Connecte-toi pour rejoindre une room multijoueur.')
-      return
-    }
-
-    if (!roomCodeInput.trim()) {
-      setRoomError('Entre un code de room.')
-      return
-    }
-
-    setRoomBusy(true)
-    setRoomError('')
-    try {
-      const room = await joinRoomRequest(user.token, roomCodeInput.trim())
-      setRoomState(room)
-      setRoomCodeInput(room.code)
-    } catch (error) {
-      setRoomError(error.message)
-    } finally {
-      setRoomBusy(false)
-    }
-  }
-
-  const handleRoll = () => {
+  const handleRoll = async () => {
     if (isMultiplayer) {
-      if (!user?.token || !roomState?.code || !canPlayMultiplayer || displayPendingRoll !== null) {
+      if (!user?.token || !code || roomBusy || !boardReady || displayWinner) {
         return
       }
 
+      const startedAt = startDiceRolling()
       setRoomBusy(true)
       setRoomError('')
-      roomActionRequest(user.token, roomState.code, 'roll')
-        .then((room) => {
+      roomActionRequest(user.token, code, 'roll')
+        .then(async (room) => {
+          await stopDiceRolling(room.lastRoll ?? 1, startedAt)
           setRoomState(room)
         })
-        .catch((error) => {
+        .catch(async (error) => {
+          await stopDiceRolling(displayLastRoll ?? 1, startedAt)
           setRoomError(error.message)
         })
         .finally(() => {
@@ -523,6 +673,8 @@ const GameBoard = () => {
     }
 
     const diceValue = Math.floor(Math.random() * 6) + 1
+    const startedAt = startDiceRolling()
+    await stopDiceRolling(diceValue, startedAt)
     const nextMovable = getMovablePawnIds(
       pawnsByPlayer,
       currentPlayer,
@@ -553,13 +705,19 @@ const GameBoard = () => {
 
   const handlePawnClick = (pawnId) => {
     if (isMultiplayer) {
-      if (!user?.token || !roomState?.code || !canPlayMultiplayer || displayPendingRoll === null) {
+      if (
+        !user?.token ||
+        !code ||
+        roomBusy ||
+        displayPendingRoll === null ||
+        !movablePawnIds.includes(pawnId)
+      ) {
         return
       }
 
       setRoomBusy(true)
       setRoomError('')
-      roomActionRequest(user.token, roomState.code, 'move', { pawnId })
+      roomActionRequest(user.token, code, 'move', { pawnId })
         .then((room) => {
           setRoomState(room)
         })
@@ -585,263 +743,163 @@ const GameBoard = () => {
 
   return (
     <section className="game-board-shell">
-      <div className="game-board-container" ref={boardRef}>
-        <div className="game-board-top">
-          <div className="game-board-top_left">
-            <div className="game-board-top_left_home">
-              <TargetGroup
-                targetIds={BASE_CIRCLES.blue}
-                registerTarget={registerTarget}
-                className="base-circle"
+      <div className="game-board-stage">
+        {isMultiplayer
+          ? activePlayers.map((color) => (
+              <PlayerBadge
+                key={color}
+                color={color}
+                player={roomState?.players?.find(
+                  (player) => player.color === color,
+                )}
               />
-            </div>
-          </div>
-          <div className="game-board-top_center">
-            <TargetGroup
-              targetIds={SEGMENT_SQUARES.top}
-              registerTarget={registerTarget}
-            />
-          </div>
-          <div className="game-board-top_right">
-            <div className="game-board-top_right_home">
-              <TargetGroup
-                targetIds={BASE_CIRCLES.red}
-                registerTarget={registerTarget}
-                className="base-circle"
-              />
-            </div>
-          </div>
-        </div>
+            ))
+          : null}
 
-        <div className="game-board-mid">
-          <div className="game-board-mid_left">
-            <TargetGroup
-              targetIds={SEGMENT_SQUARES.left}
-              registerTarget={registerTarget}
-            />
-          </div>
-          <div className="game-board-mid_center">
-            <CenterTargets registerTarget={registerTarget} />
-          </div>
-          <div className="game-board-mid_right">
-            <TargetGroup
-              targetIds={SEGMENT_SQUARES.right}
-              registerTarget={registerTarget}
-            />
-          </div>
-        </div>
-
-        <div className="game-board-bottom">
-          <div className="game-board-bottom_left">
-            <div className="game-board-bottom_left_home">
+        <div className="game-board-container" ref={boardRef}>
+          <div className="game-board-top">
+            <div className="game-board-top_left">
+              <div className="game-board-top_left_home">
+                <TargetGroup
+                  targetIds={BASE_CIRCLES.blue}
+                  registerTarget={registerTarget}
+                  className="base-circle"
+                />
+              </div>
+            </div>
+            <div className="game-board-top_center">
               <TargetGroup
-                targetIds={BASE_CIRCLES.yellow}
+                targetIds={SEGMENT_SQUARES.top}
                 registerTarget={registerTarget}
-                className="base-circle"
+              />
+            </div>
+            <div className="game-board-top_right">
+              <div className="game-board-top_right_home">
+                <TargetGroup
+                  targetIds={BASE_CIRCLES.red}
+                  registerTarget={registerTarget}
+                  className="base-circle"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="game-board-mid">
+            <div className="game-board-mid_left">
+              <TargetGroup
+                targetIds={SEGMENT_SQUARES.left}
+                registerTarget={registerTarget}
+              />
+            </div>
+            <div className="game-board-mid_center">
+              <CenterTargets registerTarget={registerTarget} />
+            </div>
+            <div className="game-board-mid_right">
+              <TargetGroup
+                targetIds={SEGMENT_SQUARES.right}
+                registerTarget={registerTarget}
               />
             </div>
           </div>
-          <div className="game-board-bottom_center">
-            <TargetGroup
-              targetIds={SEGMENT_SQUARES.bottom}
-              registerTarget={registerTarget}
-            />
-          </div>
-          <div className="game-board-bottom_right">
-            <div className="game-board-bottom_right_home">
+
+          <div className="game-board-bottom">
+            <div className="game-board-bottom_left">
+              <div className="game-board-bottom_left_home">
+                <TargetGroup
+                  targetIds={BASE_CIRCLES.yellow}
+                  registerTarget={registerTarget}
+                  className="base-circle"
+                />
+              </div>
+            </div>
+            <div className="game-board-bottom_center">
               <TargetGroup
-                targetIds={BASE_CIRCLES.green}
+                targetIds={SEGMENT_SQUARES.bottom}
                 registerTarget={registerTarget}
-                className="base-circle"
               />
             </div>
+            <div className="game-board-bottom_right">
+              <div className="game-board-bottom_right_home">
+                <TargetGroup
+                  targetIds={BASE_CIRCLES.green}
+                  registerTarget={registerTarget}
+                  className="base-circle"
+                />
+              </div>
+            </div>
+            <audio ref={audioRef} src={music} loop />
+            <button
+              onClick={toggleMusic}
+              className="music_button"
+              type="button"
+            >
+              {playing ? <MusicOnIcon /> : <MusicOffIcon />}
+            </button>
           </div>
-          <audio ref={audioRef} src={music} loop />
-          <button onClick={toggleMusic} className="music_button" type="button">
-            {playing ? <MusicOnIcon /> : <MusicOffIcon />}
-          </button>
-        </div>
 
-        {boardReady ? (
-          <PawnOverlay
-            pawns={displayPawns}
-            pawnPositions={pawnPositions}
-            currentPlayer={displayCurrentPlayer}
-            movablePawnIds={displayMovablePawnIds}
-            onPawnClick={handlePawnClick}
-          />
-        ) : null}
+          {boardReady ? (
+            <PawnOverlay
+              pawns={displayPawns}
+              pawnPositions={pawnPositions}
+              currentPlayer={displayCurrentPlayer}
+              movablePawnIds={movablePawnIds}
+              onPawnClick={handlePawnClick}
+            />
+          ) : null}
+          {displayWinner ? (
+            <VictoryOverlay
+              winnerColor={displayWinner}
+              winnerName={winnerName}
+            />
+          ) : null}
+        </div>
       </div>
 
-      <div className="game-board-controls">
-        <div className="game-board-controls_actions">
-          <button
-            type="button"
-            onClick={() => setGameMode('local')}
-            disabled={!isMultiplayer}
-          >
-            Solo local
-          </button>
-          <button
-            type="button"
-            onClick={() => setGameMode('multiplayer')}
-            disabled={isMultiplayer}
-          >
-            Multijoueur
-          </button>
-        </div>
-
+      <div className="game-board-status game-board-status--floating">
         {isMultiplayer ? (
-          <div className="game-board-controls_panel">
-            <p className="game-board-controls_hint">
-              Mode simple par room: creation, code a partager, puis synchronisation automatique.
-            </p>
-            {roomState ? (
-              <>
-                <p className="game-board-controls_hint">
-                  Room: <strong>{roomState.code}</strong>
-                </p>
-                <p className="game-board-controls_hint">
-                  Ta couleur: <strong>{myColor ?? '-'}</strong>
-                </p>
-                <p className="game-board-controls_hint">
-                  Joueurs: <strong>{roomState.players.length}/{roomState.playerCount}</strong>
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="game-board-controls_actions">
-                  {PLAYER_COUNT_OPTIONS.map((count) => (
-                    <button
-                      key={count}
-                      type="button"
-                      onClick={() => setPlayerCount(count)}
-                      disabled={playerCount === count || roomBusy}
-                    >
-                      Room {count} joueurs
-                    </button>
-                  ))}
-                </div>
-                <div className="game-board-controls_actions">
-                  <button type="button" onClick={handleCreateRoom} disabled={roomBusy}>
-                    Creer une room
-                  </button>
-                </div>
-                <label className="game-board-controls_field" htmlFor="room-code">
-                  <span>Code de room</span>
-                  <input
-                    id="room-code"
-                    type="text"
-                    value={roomCodeInput}
-                    onChange={(event) =>
-                      setRoomCodeInput(event.target.value.toUpperCase())
-                    }
-                    placeholder="Ex: A1B2C3"
-                    disabled={roomBusy}
-                  />
-                </label>
-                <div className="game-board-controls_actions">
-                  <button type="button" onClick={handleJoinRoom} disabled={roomBusy}>
-                    Rejoindre
-                  </button>
-                </div>
-              </>
-            )}
-            {roomError ? <p className="game-board-controls_error">{roomError}</p> : null}
-          </div>
+          <p>
+            Room: <strong>{code}</strong>
+          </p>
         ) : null}
-
-        <div className="game-board-controls_row game-board-controls_row--players">
-          {displayPlayers.map((player) => (
-            <div
-              key={player}
-              className={`turn-pill turn-pill--${player} ${
-                displayCurrentPlayer === player ? 'turn-pill--active' : ''
-              }`}
-            >
-              {PLAYER_LABELS[player]}
-            </div>
-          ))}
-        </div>
-
-        <div className="game-board-controls_actions">
-          {PLAYER_COUNT_OPTIONS.map((count) => (
-            <button
-              key={count}
-              type="button"
-              onClick={() => startNewGame(count)}
-              disabled={
-                isMultiplayer ||
-                (playerCount === count && !winner && lastRoll === null)
-              }
-            >
-              {count} joueurs
-            </button>
-          ))}
-        </div>
-
-        <div className="game-board-controls_actions">
-          <button
-            type="button"
-            onClick={handleRoll}
-            disabled={
-              isMultiplayer
-                ? !canPlayMultiplayer || displayPendingRoll !== null || roomBusy
-                : winner !== null ||
-                  pendingRoll !== null ||
-                  animatingPawnId !== null ||
-                  !boardReady
-            }
-          >
-            {isMultiplayer
-              ? roomBusy
-                ? 'Synchronisation...'
-                : 'Lancer le de'
-              : animatingPawnId
-                ? 'Deplacement...'
-                : 'Lancer le de'}
-          </button>
-          <button
-            type="button"
-            onClick={() => startNewGame(playerCount)}
-            disabled={isMultiplayer}
-          >
-            Nouvelle partie
-          </button>
-        </div>
-
-        <div className="game-board-status">
-          <p>
-            Mode: <strong>{isMultiplayer ? 'Multijoueur' : 'Local'}</strong>
-          </p>
-          <p>
-            Joueurs actifs: <strong>{displayPlayers.length}</strong>
-          </p>
-          <p>
-            Plateau pret: <strong>{boardReady ? 'Oui' : 'Non'}</strong>
-          </p>
-          <p>
-            Tour actif: <strong>{PLAYER_LABELS[displayCurrentPlayer]}</strong>
-          </p>
-          <p>
-            Dernier de: <strong>{displayLastRoll ?? '-'}</strong>
-          </p>
-          <p>
-            Pion a choisir: <strong>{displayPendingRoll ? 'Oui' : 'Non'}</strong>
-          </p>
-          <p>
-            Animation en cours: <strong>{isMultiplayer ? 'Non' : animatingPawnId ? 'Oui' : 'Non'}</strong>
-          </p>
-          <p>
-            Ta couleur: <strong>{isMultiplayer ? myColor ?? '-' : '-'}</strong>
-          </p>
-          <p>
-            Pions au centre: <strong>{finishedCount}/4</strong>
-          </p>
-          <p>
-            Etat: <strong>{displayStatusMessage}</strong>
-          </p>
-        </div>
+        <p>
+          <strong>{minimalStatusMessage}</strong>
+        </p>
+        {roomError ? <p>{roomError}</p> : null}
+        {displayPendingRoll !== null ? <p>Choisis un pion.</p> : null}
+        <button
+          type="button"
+          className={`game-board-action ${isRollingDice ? 'game-board-action--rolling' : ''}`}
+          onClick={() => {
+            void handleRoll()
+          }}
+          disabled={
+            isMultiplayer
+              ? roomBusy ||
+                !boardReady ||
+                displayWinner !== null ||
+                displayPendingRoll !== null ||
+                !isMyTurn
+              : winner !== null ||
+                pendingRoll !== null ||
+                animatingPawnId !== null ||
+                !boardReady ||
+                isRollingDice
+          }
+        >
+          <span className="game-board-action_die">
+            <DisplayedDieIcon />
+          </span>
+          <span className="game-board-action_label">
+            {roomBusy || animatingPawnId || isRollingDice
+              ? 'Lancement...'
+              : 'Lancer le de'}
+          </span>
+        </button>
+        {isMultiplayer ? (
+          <Link to="/play" className="game-board-back">
+            Quitter la room
+          </Link>
+        ) : null}
       </div>
     </section>
   )
