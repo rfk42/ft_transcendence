@@ -27,6 +27,7 @@ import {
 } from './gameRules.jsx'
 import { useBoardTargets } from './useBoardTargets.jsx'
 import { CenterTargets, PawnOverlay, TargetGroup } from './BoardParts.jsx'
+import RoomChat from './RoomChat.jsx'
 
 const STEP_ANIMATION_MS = 170
 const ROOM_POLL_MS = 1500
@@ -227,6 +228,7 @@ const GameBoard = ({ mode = 'solo' }) => {
   const [roomState, setRoomState] = useState(null)
   const [roomBusy, setRoomBusy] = useState(false)
   const [roomError, setRoomError] = useState('')
+  const [chatMessage, setChatMessage] = useState('')
   const previousRoomStateRef = useRef(null)
   const diceIntervalRef = useRef(null)
   const [rollingFace, setRollingFace] = useState(1)
@@ -268,12 +270,13 @@ const GameBoard = ({ mode = 'solo' }) => {
   const minimalStatusMessage = displayWinner
     ? `${PLAYER_LABELS[displayWinner]} a gagne.`
     : isMultiplayer && roomState?.status === 'waiting'
-      ? `Room ${code} en attente de joueurs`
+      ? 'En attente de joueurs'
       : isMyTurn
         ? 'A votre tour'
         : "En attente que l'adversaire joue"
   const displayedDieValue = isRollingDice ? rollingFace : (displayLastRoll ?? 1)
   const DisplayedDieIcon = DICE_ICONS[displayedDieValue] ?? DiceOne
+  const roomChatMessages = roomState?.chatMessages ?? []
 
   const { boardRef, pawnPositions, registerTarget } =
     useBoardTargets(displayPawns)
@@ -741,6 +744,35 @@ const GameBoard = ({ mode = 'solo' }) => {
     void playPawn(pawnId, pendingRoll)
   }
 
+  const handleChatSubmit = async (event) => {
+    event.preventDefault()
+
+    const trimmedMessage = chatMessage.trim()
+    if (
+      !isMultiplayer ||
+      !user?.token ||
+      !code ||
+      !trimmedMessage ||
+      roomBusy
+    ) {
+      return
+    }
+
+    setRoomBusy(true)
+    setRoomError('')
+    try {
+      const room = await roomActionRequest(user.token, code, 'chat', {
+        text: trimmedMessage,
+      })
+      setRoomState(room)
+      setChatMessage('')
+    } catch (error) {
+      setRoomError(error.message)
+    } finally {
+      setRoomBusy(false)
+    }
+  }
+
   return (
     <section className="game-board-shell">
       <div className="game-board-stage">
@@ -855,17 +887,7 @@ const GameBoard = ({ mode = 'solo' }) => {
         </div>
       </div>
 
-      <div className="game-board-status game-board-status--floating">
-        {isMultiplayer ? (
-          <p>
-            Room: <strong>{code}</strong>
-          </p>
-        ) : null}
-        <p>
-          <strong>{minimalStatusMessage}</strong>
-        </p>
-        {roomError ? <p>{roomError}</p> : null}
-        {displayPendingRoll !== null ? <p>Choisis un pion.</p> : null}
+      <div className="game-board-dice-launcher">
         <button
           type="button"
           className={`game-board-action ${isRollingDice ? 'game-board-action--rolling' : ''}`}
@@ -895,11 +917,53 @@ const GameBoard = ({ mode = 'solo' }) => {
               : 'Lancer le de'}
           </span>
         </button>
-        {isMultiplayer ? (
-          <Link to="/play" className="game-board-back">
-            Quitter la room
-          </Link>
-        ) : null}
+      </div>
+
+      <div className="game-board-bottom-layout">
+        <div className="game-board-panel game-board-panel--floating">
+          <div className="game-board-panel_header">
+            <div className="game-board-panel_room">
+              {isMultiplayer ? (
+                <>
+                  <p>
+                    Room: <strong>{code}</strong>
+                  </p>
+                  <p className="game-board-panel_subtitle">
+                    <strong>{minimalStatusMessage}</strong>
+                  </p>
+                </>
+              ) : (
+                <p className="game-board-status_placeholder" aria-hidden="true">
+                  .
+                </p>
+              )}
+            </div>
+            {isMultiplayer ? (
+              <Link to="/play" className="game-board-back">
+                Quitter la room
+              </Link>
+            ) : null}
+          </div>
+
+          <div className="game-board-panel_body">
+            {isMultiplayer ? (
+              <RoomChat
+                messages={roomChatMessages}
+                userId={user?.id}
+                value={chatMessage}
+                onChange={setChatMessage}
+                onSubmit={handleChatSubmit}
+                disabled={!user?.token || roomBusy}
+                title={
+                  roomError ||
+                  (displayPendingRoll !== null
+                    ? 'Choisis un pion.'
+                    : 'Chat de room')
+                }
+              />
+            ) : null}
+          </div>
+        </div>
       </div>
     </section>
   )

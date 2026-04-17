@@ -25,6 +25,7 @@ const getRoomPublicState = (room, userId = null) => ({
   winner: room.winner,
   status: room.status,
   statusMessage: room.statusMessage,
+  chatMessages: room.chatMessages,
   me: room.players.find((player) => player.userId === userId) ?? null,
   movablePawnIds:
     room.pendingRoll === null || room.winner
@@ -53,6 +54,15 @@ const createRoom = ({userId, username, avatarUrl, playerCount}) => {
     winner: null,
     status: "waiting",
     statusMessage: "Room creee. En attente des joueurs.",
+    chatMessages: [
+      {
+        id: crypto.randomUUID(),
+        userId: null,
+        username: "Systeme",
+        text: `Room ${playerCount} joueurs creee.`,
+        createdAt: new Date().toISOString(),
+      },
+    ],
     totalMoves: 0,
     createdAt: Date.now(),
     startedAt: null,
@@ -85,6 +95,13 @@ const joinRoom = ({code, userId, username, avatarUrl}) => {
   const color = room.activePlayers.find((entry) => !usedColors.has(entry));
 
   room.players.push({userId, username, avatarUrl: avatarUrl ?? null, color});
+  room.chatMessages.push({
+    id: crypto.randomUUID(),
+    userId: null,
+    username: "Systeme",
+    text: `${username} a rejoint la room.`,
+    createdAt: new Date().toISOString(),
+  });
   room.status =
     room.players.length === room.playerCount ? "playing" : "waiting";
   if (room.status === "playing" && !room.startedAt) {
@@ -96,6 +113,35 @@ const joinRoom = ({code, userId, username, avatarUrl}) => {
       : `${username} a rejoint la room.`;
 
   return {room, joined: true};
+};
+
+const addRoomMessage = ({code, userId, username, text}) => {
+  const room = getRoom(code);
+
+  if (!room) {
+    return {error: "Room introuvable"};
+  }
+
+  const player = room.players.find((entry) => entry.userId === userId);
+  if (!player) {
+    return {error: "Tu ne fais pas partie de cette room"};
+  }
+
+  const trimmedText = String(text ?? "").trim();
+  if (!trimmedText) {
+    return {error: "Message vide"};
+  }
+
+  room.chatMessages.push({
+    id: crypto.randomUUID(),
+    userId,
+    username,
+    text: trimmedText.slice(0, 300),
+    createdAt: new Date().toISOString(),
+  });
+  room.chatMessages = room.chatMessages.slice(-40);
+
+  return {room};
 };
 
 const rollDice = ({code, userId}) => {
@@ -204,6 +250,7 @@ const movePawn = ({code, userId, pawnId, forcedRoll = null}) => {
 };
 
 module.exports = {
+  addRoomMessage,
   createRoom,
   getRoom,
   getRoomPublicState,

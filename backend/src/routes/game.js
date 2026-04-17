@@ -3,6 +3,7 @@ const router = express.Router();
 const prisma = require("../db");
 const authenticate = require("../middleware/auth");
 const {
+  addRoomMessage,
   createRoom,
   getRoom,
   getRoomPublicState,
@@ -332,6 +333,35 @@ router.post("/rooms/:code/move", authenticate, (req, res) => {
       console.error("Erreur move room:", err);
       res.status(500).json({error: "Erreur serveur"});
     });
+});
+
+router.post("/rooms/:code/chat", authenticate, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: {id: req.userId},
+      select: {id: true, username: true},
+    });
+
+    if (!user) {
+      return res.status(404).json({error: "Utilisateur introuvable"});
+    }
+
+    const result = addRoomMessage({
+      code: req.params.code,
+      userId: user.id,
+      username: user.username,
+      text: req.body.text,
+    });
+
+    if (result.error) {
+      return res.status(400).json({error: result.error});
+    }
+
+    res.json({room: getRoomPublicState(result.room, req.userId)});
+  } catch (err) {
+    console.error("Erreur chat room:", err);
+    res.status(500).json({error: "Erreur serveur"});
+  }
 });
 
 router.post("/", authenticate, async (req, res) => {
