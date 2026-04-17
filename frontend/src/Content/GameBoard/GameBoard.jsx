@@ -778,14 +778,14 @@ const GameBoard = ({ mode = 'solo' }) => {
       <div className="game-board-stage">
         {isMultiplayer
           ? activePlayers.map((color) => (
-              <PlayerBadge
-                key={color}
-                color={color}
-                player={roomState?.players?.find(
-                  (player) => player.color === color,
-                )}
-              />
-            ))
+            <PlayerBadge
+              key={color}
+              color={color}
+              player={roomState?.players?.find(
+                (player) => player.color === color,
+              )}
+            />
+          ))
           : null}
 
         <div className="game-board-container" ref={boardRef}>
@@ -897,15 +897,15 @@ const GameBoard = ({ mode = 'solo' }) => {
           disabled={
             isMultiplayer
               ? roomBusy ||
-                !boardReady ||
-                displayWinner !== null ||
-                displayPendingRoll !== null ||
-                !isMyTurn
+              !boardReady ||
+              displayWinner !== null ||
+              displayPendingRoll !== null ||
+              !isMyTurn
               : winner !== null ||
-                pendingRoll !== null ||
-                animatingPawnId !== null ||
-                !boardReady ||
-                isRollingDice
+              pendingRoll !== null ||
+              animatingPawnId !== null ||
+              !boardReady ||
+              isRollingDice
           }
         >
           <span className="game-board-action_die">
@@ -919,11 +919,11 @@ const GameBoard = ({ mode = 'solo' }) => {
         </button>
       </div>
 
-      <div className="game-board-bottom-layout">
-        <div className="game-board-panel game-board-panel--floating">
-          <div className="game-board-panel_header">
-            <div className="game-board-panel_room">
-              {isMultiplayer ? (
+      {isMultiplayer ? (
+        <div className="game-board-bottom-layout">
+          <div className="game-board-panel game-board-panel--floating">
+            <div className="game-board-panel_header">
+              <div className="game-board-panel_room">
                 <>
                   <p>
                     Room: <strong>{code}</strong>
@@ -932,21 +932,13 @@ const GameBoard = ({ mode = 'solo' }) => {
                     <strong>{minimalStatusMessage}</strong>
                   </p>
                 </>
-              ) : (
-                <p className="game-board-status_placeholder" aria-hidden="true">
-                  .
-                </p>
-              )}
-            </div>
-            {isMultiplayer ? (
+              </div>
               <Link to="/play" className="game-board-back">
                 Quitter la room
               </Link>
-            ) : null}
-          </div>
+            </div>
 
-          <div className="game-board-panel_body">
-            {isMultiplayer ? (
+            <div className="game-board-panel_body">
               <RoomChat
                 messages={roomChatMessages}
                 userId={user?.id}
@@ -961,10 +953,10 @@ const GameBoard = ({ mode = 'solo' }) => {
                     : 'Chat de room')
                 }
               />
-            ) : null}
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
     </section>
   )
 }
