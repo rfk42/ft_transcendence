@@ -34,6 +34,22 @@
   font-size: 1.1rem;
 }
 
+.friends-section {
+  margin-top: 2.5rem;
+}
+
+.friends-section-title {
+  margin: 0 0 1rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.friends-error {
+  margin: 0 0 1rem;
+  color: #ef4444;
+}
+
 .friends-list {
   display: flex;
   flex-direction: column;
@@ -61,7 +77,8 @@
     gap: 1.2rem;
   }
 
-  .friend-avatar, .friend-avatar-placeholder {
+  .friend-avatar,
+  .friend-avatar-placeholder {
     width: 3.5rem;
     height: 3.5rem;
     border-radius: 50%;
@@ -113,13 +130,56 @@
 
       &.online {
         color: #22c55e; // Vert
-        &::before { background: #22c55e; }
+
+        &::before {
+          background: #22c55e;
+        }
       }
 
       &.offline {
         color: rgba(255, 255, 255, 0.4); // Gris
-        &::before { background: rgba(255, 255, 255, 0.4); }
+
+        &::before {
+          background: rgba(255, 255, 255, 0.4);
+        }
       }
+    }
+  }
+
+  .friend-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .friend-relation-status {
+    font-size: 0.88rem;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 0.45rem 0.7rem;
+    border-radius: 0.65rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .add-friend-btn {
+    padding: 0.6rem 1rem;
+    border: 1px solid rgba(59, 130, 246, 0.45);
+    border-radius: 0.8rem;
+    background: rgba(59, 130, 246, 0.12);
+    color: #93c5fd;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover:not(:disabled) {
+      background: #3b82f6;
+      color: #fff;
+      border-color: #3b82f6;
+    }
+
+    &:disabled {
+      cursor: default;
+      opacity: 0.7;
     }
   }
 

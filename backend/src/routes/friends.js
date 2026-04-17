@@ -4,6 +4,15 @@ const authenticate = require("../middleware/auth")
 
 const router = express.Router()
 
+const ONLINE_WINDOW_MS = Number(process.env.ONLINE_WINDOW_MS || 70 * 1000)
+
+function isOnlineFromLastSeen(lastSeenAt) {
+  if (!lastSeenAt) return false
+  const lastSeenMs = new Date(lastSeenAt).getTime()
+  if (Number.isNaN(lastSeenMs)) return false
+  return Date.now() - lastSeenMs <= ONLINE_WINDOW_MS
+}
+
 // Helper : Quand Prisma retourne un user, il peut inclure 
 // des champs sensibles ou inutiles selon comment la requête est construite. 
 // Plutôt que de recopier les 5 mêmes champs dans chaque route, on centralise ça ici.
@@ -13,7 +22,7 @@ function formatUser(user) {
     id: user.id,
     username: user.username,
     avatarUrl: user.avatarUrl || null,
-    isOnline: user.isOnline,
+    isOnline: isOnlineFromLastSeen(user.lastSeenAt),
   }
 }
 
@@ -28,7 +37,12 @@ router.get("/", authenticate, async (req, res) => {
         where: { userId: req.userId },
         include: {
           friend: {
-            select: { id: true, username: true, avatarUrl: true, isOnline: true },
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+              lastSeenAt: true,
+            },
           },
         },
       }),
@@ -37,7 +51,12 @@ router.get("/", authenticate, async (req, res) => {
         where: { friendId: req.userId },
         include: {
           user: {
-            select: { id: true, username: true, avatarUrl: true, isOnline: true },
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+              lastSeenAt: true,
+            },
           },
         },
       }),
@@ -122,7 +141,12 @@ router.post("/request", authenticate, async (req, res) => {
       },
       include: {
         friend: {
-          select: { id: true, username: true, avatarUrl: true, isOnline: true },
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+            lastSeenAt: true,
+          },
         },
       },
     })
@@ -139,7 +163,7 @@ router.post("/request", authenticate, async (req, res) => {
     res.status(500).json({ error: "Erreur serveur" })
   }
 })
- 
+
 // PATCH /friends/:relationId/accept — Accepter une demande reçue
 router.patch("/:relationId/accept", authenticate, async (req, res) => {
   const { relationId } = req.params
@@ -167,7 +191,12 @@ router.patch("/:relationId/accept", authenticate, async (req, res) => {
       data: { status: "accepted" },
       include: {
         user: {
-          select: { id: true, username: true, avatarUrl: true, isOnline: true },
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+            lastSeenAt: true,
+          },
         },
       },
     })
@@ -243,28 +272,30 @@ router.delete("/:relationId", authenticate, async (req, res) => {
 // GET /friends/search?q=xxx — Chercher des utilisateurs par username
 // 
 router.get("/search", authenticate, async (req, res) => {
-  const { q } = req.query
-
-  if (!q || q.trim().length < 2) {
-    return res.status(400).json({ error: "La recherche doit faire au moins 2 caractères" })
-  }
+  const q = typeof req.query.q === "string" ? req.query.q.trim() : ""
 
   try {
+    const where = {
+      NOT: { id: req.userId }, // exclure soi-même
+      ...(q
+        ? {
+          username: {
+            contains: q,
+            mode: "insensitive",
+          },
+        }
+        : {}),
+    }
+
     const users = await prisma.user.findMany({
-      where: {
-        username: {
-          contains: q.trim(),
-          mode: "insensitive",
-        },
-        NOT: { id: req.userId }, // exclure soi-même
-      },
+      where,
       select: {
         id: true,
         username: true,
         avatarUrl: true,
-        isOnline: true,
+        lastSeenAt: true,
       },
-      take: 20,
+      orderBy: { username: "asc" },
     })
 
     // Pour chaque résultat, on récupère les relations existantes pour indiquer
@@ -287,7 +318,7 @@ router.get("/search", authenticate, async (req, res) => {
     }
 
     const result = users.map((u) => ({
-      ...u,
+      ...formatUser(u),
       relation: relByPeer[u.id] || null,
     }))
 

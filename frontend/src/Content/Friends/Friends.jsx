@@ -1,60 +1,127 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router' // Pour cliquer sur leur pseudo et aller sur leur profil
+import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router'
 import { useAuth } from '../../contexts/AuthContext'
 import './Friends.scss'
+
+const getRelationLabel = (relation) => {
+  if (!relation) return 'Aucune relation'
+  if (relation.status === 'accepted') return 'Déjà ami'
+  if (relation.status === 'pending') {
+    return relation.isSender ? 'Demande envoyée' : 'Demande reçue'
+  }
+  if (relation.status === 'blocked') return 'Bloqué'
+  return 'Relation existante'
+}
 
 const Friends = () => {
   const { isConnected } = useAuth()
   const [friends, setFriends] = useState([])
+  const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [sendingUserId, setSendingUserId] = useState(null)
+  const [error, setError] = useState('')
 
-  useEffect(() => {
-    const fetchFriends = async () => {
-      try {
-        const res = await fetch('/api/friends', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        })
-        if (res.ok) {
-          const data = await res.json()
-          // Le backend renvoie { friends, pendingSent, pendingReceived, blocked }
-          // On garde juste les amis validés pour cette page
-          setFriends(data.friends || [])
-        }
-      } catch (err) {
-        console.error("Erreur chargement amis", err)
-      } finally {
-        setLoading(false)
-      }
+  const loadData = useCallback(async () => {
+    if (!isConnected) {
+      setFriends([])
+      setUsers([])
+      setLoading(false)
+      return
     }
 
-    if (isConnected) fetchFriends()
+    const token = localStorage.getItem('token')
+    if (!token) {
+      setFriends([])
+      setUsers([])
+      setLoading(false)
+      return
+    }
+
+    const headers = { Authorization: `Bearer ${token}` }
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const [friendsRes, usersRes] = await Promise.all([
+        fetch('/api/friends', { headers }),
+        fetch('/api/friends/search', { headers }),
+      ])
+
+      if (friendsRes.ok) {
+        const friendsData = await friendsRes.json()
+        setFriends(friendsData.friends || [])
+      } else {
+        setFriends([])
+      }
+
+      const usersData = await usersRes.json()
+      if (!usersRes.ok) {
+        throw new Error(usersData.error || 'Impossible de charger les utilisateurs')
+      }
+      setUsers(usersData.users || [])
+    } catch (err) {
+      setError(err.message || 'Erreur serveur')
+    } finally {
+      setLoading(false)
+    }
   }, [isConnected])
 
-  // Fonction pour supprimer un ami (utilise la route DELETE de ton collègue)
+  useEffect(() => {
+    void loadData()
+  }, [loadData])
+
   const handleRemoveFriend = async (relationId) => {
-    // Petite confirmation avant de supprimer
-    if (!window.confirm("Es-tu sûr de vouloir retirer ce joueur de tes amis ?")) return
+    if (!window.confirm('Es-tu sûr de vouloir retirer ce joueur de tes amis ?')) return
 
     try {
       const res = await fetch(`/api/friends/${relationId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
       })
+
       if (res.ok) {
-        // On met à jour l'affichage en retirant l'ami de la liste
-        setFriends(prev => prev.filter(f => f.relationId !== relationId))
+        await loadData()
       }
     } catch (err) {
-      console.error("Erreur suppression ami", err)
+      console.error('Erreur suppression ami', err)
+    }
+  }
+
+  const handleSendFriendRequest = async (targetUser) => {
+    if (targetUser.relation) return
+
+    setError('')
+    setSendingUserId(targetUser.id)
+
+    try {
+      const res = await fetch('/api/friends/request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ username: targetUser.username }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || "Impossible d'envoyer la demande")
+      }
+
+      await loadData()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSendingUserId(null)
     }
   }
 
   if (!isConnected) return <div className="friends-container">Veuillez vous connecter.</div>
-  if (loading) return <div className="friends-container">Chargement de vos amis...</div>
+  if (loading)
+    return <div className="friends-container">Chargement...</div>
 
   return (
     <div className="friends-container">
@@ -67,7 +134,7 @@ const Friends = () => {
           </p>
         ) : (
           <div className="friends-list">
-            {friends.map(friend => (
+            {friends.map((friend) => (
               <div key={friend.relationId} className="friend-item">
                 <div className="friend-info">
                   {friend.avatarUrl ? (
@@ -77,7 +144,7 @@ const Friends = () => {
                       {friend.username[0].toUpperCase()}
                     </div>
                   )}
-                  
+
                   <div className="friend-details">
                     {/* Lien direct vers la page de profil de l'ami */}
                     <Link to={`/profile/${friend.id}`} className="friend-username">
@@ -101,6 +168,60 @@ const Friends = () => {
             ))}
           </div>
         )}
+
+        <section className="friends-section">
+          <h2 className="friends-section-title">Tous les utilisateurs</h2>
+
+          {error ? <p className="friends-error">{error}</p> : null}
+
+          {users.length === 0 ? (
+            <p className="empty-friends">Aucun utilisateur à afficher.</p>
+          ) : (
+            <div className="friends-list">
+              {users.map((u) => {
+                const relationLabel = getRelationLabel(u.relation)
+
+                return (
+                  <div key={u.id} className="friend-item">
+                    <div className="friend-info">
+                      {u.avatarUrl ? (
+                        <img src={u.avatarUrl} alt="" className="friend-avatar" />
+                      ) : (
+                        <div className="friend-avatar-placeholder">
+                          {u.username[0].toUpperCase()}
+                        </div>
+                      )}
+
+                      <div className="friend-details">
+                        <Link to={`/profile/${u.id}`} className="friend-username">
+                          {u.username}
+                        </Link>
+                        <span className={`status-indicator ${u.isOnline ? 'online' : 'offline'}`}>
+                          {u.isOnline ? 'En ligne' : 'Hors ligne'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="friend-actions">
+                      {u.relation ? (
+                        <span className="friend-relation-status">{relationLabel}</span>
+                      ) : (
+                        <button
+                          className="add-friend-btn"
+                          onClick={() => handleSendFriendRequest(u)}
+                          disabled={sendingUserId === u.id}
+                          title="Envoyer une demande"
+                        >
+                          {sendingUserId === u.id ? 'Envoi...' : 'Ajouter'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   )

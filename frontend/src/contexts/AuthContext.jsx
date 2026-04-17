@@ -38,9 +38,39 @@ export const AuthProvider = ({ children }) => {
   }
 
   const logout = () => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {
+        // best effort
+      })
+    }
     localStorage.removeItem('token')
     setUser(null)
   }
+
+  // Heartbeat périodique pour maintenir un statut online fiable côté amis
+  useEffect(() => {
+    if (!user?.token) return undefined
+
+    const sendPresence = () => {
+      fetch('/api/auth/presence', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${user.token}` },
+      }).catch(() => {
+        // heartbeat silencieux
+      })
+    }
+
+    sendPresence()
+    const intervalId = window.setInterval(sendPresence, 30_000)
+
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [user?.token])
 
   const updateUser = (userData) => {
     setUser((prev) => (prev ? { ...prev, ...userData } : prev))

@@ -66,6 +66,26 @@ function sanitizeUser(user) {
   return safe
 }
 
+async function updatePresence(userId) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: {
+      isOnline: true,
+      lastSeenAt: new Date(),
+    },
+  })
+}
+
+async function markOffline(userId) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: {
+      isOnline: false,
+      lastSeenAt: new Date(),
+    },
+  })
+}
+
 //  Routes 
 
 //  Google OAuth 2.0 
@@ -145,6 +165,7 @@ router.get("/google/callback", async (req, res) => {
       }
     }
 
+    user = await updatePresence(user.id)
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "7d" })
 
     // Redirige vers le frontend avec le token
@@ -232,6 +253,7 @@ router.get("/42/callback", async (req, res) => {
       }
     }
 
+    user = await updatePresence(user.id)
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "7d" })
     res.redirect(`${FRONTEND_URL}/oauth/callback?token=${token}`)
   } catch (err) {
@@ -277,8 +299,9 @@ router.post("/login", async (req, res) => {
     const valid = await bcrypt.compare(password, user.passwordHash)
     if (!valid) return res.status(401).json({ error: "Nom d'utilisateur ou mot de passe incorrect" })
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "7d" })
-    res.json({ token, user: sanitizeUser(user) })
+    const sessionUser = await updatePresence(user.id)
+    const token = jwt.sign({ userId: sessionUser.id }, process.env.JWT_SECRET, { expiresIn: "7d" })
+    res.json({ token, user: sanitizeUser(sessionUser) })
   } catch (err) {
     res.status(500).json({ error: "Erreur serveur" })
   }
@@ -287,10 +310,35 @@ router.post("/login", async (req, res) => {
 //  GET /auth/me — renvoie l'utilisateur courant à partir du token 
 router.get("/me", authenticate, async (req, res) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.userId } })
-    if (!user) return res.status(404).json({ error: "Utilisateur introuvable" })
+    const user = await updatePresence(req.userId)
     res.json({ user: sanitizeUser(user) })
   } catch (err) {
+    if (err.code === "P2025")
+      return res.status(404).json({ error: "Utilisateur introuvable" })
+    res.status(500).json({ error: "Erreur serveur" })
+  }
+})
+
+//  POST /auth/presence — heartbeat pour statut online
+router.post("/presence", authenticate, async (req, res) => {
+  try {
+    await updatePresence(req.userId)
+    res.status(204).send()
+  } catch (err) {
+    if (err.code === "P2025")
+      return res.status(404).json({ error: "Utilisateur introuvable" })
+    res.status(500).json({ error: "Erreur serveur" })
+  }
+})
+
+//  POST /auth/logout — passe l'utilisateur hors ligne
+router.post("/logout", authenticate, async (req, res) => {
+  try {
+    await markOffline(req.userId)
+    res.status(204).send()
+  } catch (err) {
+    if (err.code === "P2025")
+      return res.status(404).json({ error: "Utilisateur introuvable" })
     res.status(500).json({ error: "Erreur serveur" })
   }
 })
@@ -335,7 +383,7 @@ router.post("/me/avatar", authenticate, (req, res) => {
       const current = await prisma.user.findUnique({ where: { id: req.userId } })
       if (current?.avatarUrl?.startsWith("/uploads/avatars/")) {
         const oldPath = path.join(UPLOAD_DIR, current.avatarUrl.replace("/uploads/", ""))
-        fs.unlink(oldPath, () => {}) // suppression
+        fs.unlink(oldPath, () => { }) // suppression
       }
 
       const avatarUrl = `/uploads/avatars/${req.file.filename}`
@@ -359,7 +407,7 @@ router.delete("/me/avatar", authenticate, async (req, res) => {
     // Supprimer le fichier local si c'est un upload local (pas une URL OAuth)
     if (user.avatarUrl?.startsWith("/uploads/avatars/")) {
       const filePath = path.join(UPLOAD_DIR, user.avatarUrl.replace("/uploads/", ""))
-      fs.unlink(filePath, () => {})
+      fs.unlink(filePath, () => { })
     }
 
     const updated = await prisma.user.update({
