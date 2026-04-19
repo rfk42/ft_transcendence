@@ -53,6 +53,7 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://ludo_user:supersecret@postgres:5432/ludo
       JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_URL: ${FRONTEND_URL:-https://localhost:8443}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-https://localhost:8443/api/auth/google/callback}
@@ -85,7 +86,7 @@ services:
       target: dev
     image: frontend:rhamini
     environment:
-      VITE_API_URL: https://localhost/api
+      VITE_API_URL: /api
       CHOKIDAR_USEPOLLING: "true"
     volumes:
       - ./frontend:/app

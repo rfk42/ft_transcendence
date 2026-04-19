@@ -5,6 +5,7 @@ const rateLimit = require("express-rate-limit");
 
 const app = express();
 const isDevelopment = process.env.NODE_ENV !== "production";
+app.set("trust proxy", true);
 app.use(cors());
 app.use(express.json());
 

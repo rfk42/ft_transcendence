@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import { useAuth } from '../../contexts/AuthContext'
 import './PlayMode.scss'
 
@@ -46,32 +46,49 @@ const PlayMode = () => {
     }
   }
 
-  const handleJoinRoom = () => {
+  const handleJoinRoom = async () => {
+    if (!user?.token) {
+      setError('Connecte-toi pour rejoindre une room.')
+      return
+    }
+
     if (!roomCode.trim()) {
       setError('Entre un code de room.')
       return
     }
 
+    setBusy(true)
     setError('')
-    navigate(`/play/multi/${roomCode.trim().toUpperCase()}`)
+
+    try {
+      const normalizedCode = roomCode.trim().toUpperCase()
+      const response = await fetch(`/api/game/rooms/${normalizedCode}`, {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Room introuvable')
+      }
+
+      navigate(`/play/multi/${normalizedCode}`)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
     <section className="play-mode">
-      <h1>Choisis ton mode</h1>
-      <p>
-        Le solo lance une partie locale. Le multi passe par une room partagee.
-      </p>
-
-      <div className="play-mode_actions">
-        <Link to="/play/solo" className="play-mode_button">
-          Solo
-        </Link>
-      </div>
+      <h1>Multijoueur</h1>
+      <p>Crée une room de 2 à 4 joueurs ou rejoins-en une avec son code.</p>
 
       <div className="play-mode_card">
-        <h2>Multijoueur</h2>
-        <p>Crée une room de 2 à 4 joueurs ou rejoins-en une avec son code.</p>
+        <h2>Choisis ta room</h2>
 
         <div className="play-mode_actions">
           {PLAYER_COUNT_OPTIONS.map((count) => (
