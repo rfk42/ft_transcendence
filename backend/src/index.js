@@ -13,7 +13,7 @@ app.use(express.json());
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
-  message: {error: "Trop de requêtes, réessaie dans quelques minutes"},
+  message: {error: "Too many requests, try again in a few minutes"},
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -25,7 +25,7 @@ if (!isDevelopment) {
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
-  message: {error: "Trop de tentatives, réessaie dans 15 minutes"},
+  message: {error: "Too many attempts, try again in 15 minutes"},
   standardHeaders: true,
   legacyHeaders: false,
 });

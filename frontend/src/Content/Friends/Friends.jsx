@@ -4,13 +4,13 @@ import { useAuth } from '../../contexts/AuthContext'
 import './Friends.scss'
 
 const getRelationLabel = (relation) => {
-  if (!relation) return 'Aucune relation'
-  if (relation.status === 'accepted') return 'Déjà ami'
+  if (!relation) return 'No relation'
+  if (relation.status === 'accepted') return 'Already friends'
   if (relation.status === 'pending') {
-    return relation.isSender ? 'Demande envoyée' : 'Demande reçue'
+    return relation.isSender ? 'Friend request sent' : 'Friend request received'
   }
-  if (relation.status === 'blocked') return 'Bloqué'
-  return 'Relation existante'
+  if (relation.status === 'blocked') return 'Blocked'
+  return 'Existing relation'
 }
 
 const Friends = () => {
@@ -57,7 +57,7 @@ const Friends = () => {
 
       const usersData = await usersRes.json()
       if (!usersRes.ok) {
-        throw new Error(usersData.error || 'Impossible de charger les utilisateurs')
+        throw new Error(usersData.error || 'Unable to load users')
       }
       setUsers(usersData.users || [])
     } catch (err) {
@@ -72,7 +72,7 @@ const Friends = () => {
   }, [loadData])
 
   const handleRemoveFriend = async (relationId) => {
-    if (!window.confirm('Es-tu sûr de vouloir retirer ce joueur de tes amis ?')) return
+    if (!window.confirm('Are you sure you want to remove this player from your friends?')) return
 
     try {
       const res = await fetch(`/api/friends/${relationId}`, {
@@ -119,18 +119,18 @@ const Friends = () => {
     }
   }
 
-  if (!isConnected) return <div className="friends-container">Veuillez vous connecter.</div>
+  if (!isConnected) return <div className="friends-container">Please log in.</div>
   if (loading)
-    return <div className="friends-container">Chargement...</div>
+    return <div className="friends-container">Loading...</div>
 
   return (
     <div className="friends-container">
       <div className="friends-card">
-        <h1 className="friends-title">Mes Amis ({friends.length})</h1>
+        <h1 className="friends-title">My friends ({friends.length})</h1>
 
         {friends.length === 0 ? (
-          <p className="empty-friends">
-            Vous n'avez pas encore d'amis. Cherchez des joueurs dans le classement !
+          <p className="empty-friends">You have no friends yet. Search for players in the leaderboard!
+           
           </p>
         ) : (
           <div className="friends-list">
@@ -152,7 +152,7 @@ const Friends = () => {
                     </Link>
                     {/* Le petit point vert ou gris pour dire s'il est en ligne */}
                     <span className={`status-indicator ${friend.isOnline ? 'online' : 'offline'}`}>
-                      {friend.isOnline ? 'En ligne' : 'Hors ligne'}
+                      {friend.isOnline ? 'Online' : 'Offline'}
                     </span>
                   </div>
                 </div>
@@ -160,9 +160,9 @@ const Friends = () => {
                 <button
                   className="remove-friend-btn"
                   onClick={() => handleRemoveFriend(friend.relationId)}
-                  title="Supprimer cet ami"
+                  title="Remove this friend"
                 >
-                  Supprimer
+                  Remove
                 </button>
               </div>
             ))}
@@ -170,12 +170,12 @@ const Friends = () => {
         )}
 
         <section className="friends-section">
-          <h2 className="friends-section-title">Tous les utilisateurs</h2>
+          <h2 className="friends-section-title">All users</h2>
 
           {error ? <p className="friends-error">{error}</p> : null}
 
           {users.length === 0 ? (
-            <p className="empty-friends">Aucun utilisateur à afficher.</p>
+            <p className="empty-friends">No users to display.</p>
           ) : (
             <div className="friends-list">
               {users.map((u) => {
@@ -197,7 +197,7 @@ const Friends = () => {
                           {u.username}
                         </Link>
                         <span className={`status-indicator ${u.isOnline ? 'online' : 'offline'}`}>
-                          {u.isOnline ? 'En ligne' : 'Hors ligne'}
+                          {u.isOnline ? 'Online' : 'Offline'}
                         </span>
                       </div>
                     </div>
@@ -210,9 +210,9 @@ const Friends = () => {
                           className="add-friend-btn"
                           onClick={() => handleSendFriendRequest(u)}
                           disabled={sendingUserId === u.id}
-                          title="Envoyer une demande"
+                          title="Send friend request"
                         >
-                          {sendingUserId === u.id ? 'Envoi...' : 'Ajouter'}
+                          {sendingUserId === u.id ? 'Sending...' : 'Add'}
                         </button>
                       )}
                     </div>

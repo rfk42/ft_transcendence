@@ -35,7 +35,7 @@ const fileUpload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 Mo max
   fileFilter: (_req, file, cb) => {
     if (!ALLOWED_TYPES.includes(file.mimetype)) {
-      return cb(new Error("Type de fichier non supporté"))
+      return cb(new Error("Unsupported file type"))
     }
     cb(null, true)
   },
@@ -46,11 +46,11 @@ router.post("/", authenticate, (req, res) => {
   fileUpload.single("file")(req, res, (err) => {
     if (err instanceof multer.MulterError) {
       if (err.code === "LIMIT_FILE_SIZE")
-        return res.status(400).json({ error: "Fichier trop volumineux (10 Mo max)" })
+        return res.status(400).json({ error: "File too large (10 MB max)" })
       return res.status(400).json({ error: err.message })
     }
     if (err) return res.status(400).json({ error: err.message })
-    if (!req.file) return res.status(400).json({ error: "Aucun fichier envoyé" })
+    if (!req.file) return res.status(400).json({ error: "No file sent" })
 
     res.status(201).json({
       filename: req.file.filename,
@@ -71,12 +71,12 @@ router.get("/files/:filename", authenticate, (req, res) => {
   const filePath = path.join(FILES_DIR, safeName)
 
   if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "Fichier introuvable" })
+    return res.status(404).json({ error: "File not found" })
   }
 
-  // Vérifie que le fichier appartient bien au user (le nom commence par son userId)
+  // Verify that the file belongs to the user
   if (!safeName.startsWith(`${req.userId}-`)) {
-    return res.status(403).json({ error: "Accès non autorisé" })
+    return res.status(403).json({ error: "Unauthorized access" })
   }
 
   res.sendFile(filePath)
@@ -89,17 +89,17 @@ router.delete("/files/:filename", authenticate, (req, res) => {
   const filePath = path.join(FILES_DIR, safeName)
 
   if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "Fichier introuvable" })
+    return res.status(404).json({ error: "File not found" })
   }
 
-  // Seul le propriétaire peut supprimer
+  // Only the owner can delete
   if (!safeName.startsWith(`${req.userId}-`)) {
-    return res.status(403).json({ error: "Accès non autorisé" })
+    return res.status(403).json({ error: "Unauthorized access" })
   }
 
   fs.unlink(filePath, (err) => {
-    if (err) return res.status(500).json({ error: "Erreur lors de la suppression" })
-    res.json({ message: "Fichier supprimé" })
+    if (err) return res.status(500).json({ error: "Error during deletion" })
+    res.json({ message: "File deleted" })
   })
 })
 

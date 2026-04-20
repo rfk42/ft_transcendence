@@ -66,11 +66,11 @@ const Profile = () => {
 
     // Validation client : type et taille avant d'envoyer
     if (!ALLOWED_TYPES.includes(file.type)) {
-      setError('Format non supporté (jpeg, png, webp uniquement)')
+      setError('Unsupported format (jpeg, png, webp only)')
       return
     }
     if (file.size > MAX_SIZE) {
-      setError('Fichier trop volumineux (5 Mo max)')
+      setError('File too large (5 MB max)')
       return
     }
 
@@ -128,7 +128,7 @@ const Profile = () => {
       return
     }
     if (trimmed.length < 3 || trimmed.length > 24) {
-      setError('Le pseudo doit faire entre 3 et 24 caractères')
+      setError('Username must be between 3 and 24 characters')
       return
     }
 
@@ -145,7 +145,7 @@ const Profile = () => {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Erreur lors de la mise à jour')
+        setError(data.error || 'Error updating profile')
         return
       }
       updateUser(data.user)
@@ -220,14 +220,14 @@ const Profile = () => {
                   autoFocus
                 />
                 <button className="profile-cancel-btn" onClick={handleCancel} disabled={saving}>
-                  Annuler
+                  Cancel
                 </button>
               </div>
             ) : (
               <div className="profile-edit-row">
                 <h1>{username}</h1>
                 <button className="profile-edit-btn" onClick={() => setEditing(true)}>
-                  Modifier
+                  Edit
                 </button>
               </div>
             )}
@@ -237,45 +237,45 @@ const Profile = () => {
     
         <div className="profile-info">
           <div className="profile-section">
-            <h2>Statistiques</h2>
+            <h2>Statistics</h2>
             
             {loadingStats ? (
-              <p className="empty-state">Chargement...</p>
+              <p className="empty-state">Loading...</p>
             ) : (
               <div className="stats-grid">
                 <div className="stat-card">
                   <div className="stat-value">{stats?.totalGamesPlayed ?? 0}</div>
-                  <div className="stat-label">Parties jouées</div>
+                  <div className="stat-label">Games played</div>
                 </div>
                 <div className="stat-card">
                   <div className="stat-value">{stats?.gamesWon ?? 0}</div>
-                  <div className="stat-label">Victoires</div>
+                  <div className="stat-label">Wins</div>
                 </div>
                 <div className="stat-card">
                   <div className="stat-value">{stats?.winRate ? `${Math.round(stats.winRate)}%` : '0%'}</div>
-                  <div className="stat-label">Taux de victoire</div>
+                  <div className="stat-label">Winrate</div>
                 </div>
               </div>
             )}
           </div>
 
           <div className="profile-section">
-            <h2>Historique des parties</h2>
+            <h2>Match history</h2>
             <div className="game-history">
               {loadingStats ? (
-                <p className="empty-state">Chargement...</p>
+                <p className="empty-state">Loading...</p>
               ) : history.length === 0 ? (
-                <p className="empty-state">Aucune partie jouée pour l'instant</p>
+                <p className="empty-state">No games played yet</p>
               ) : (
                 <div className="history-list">
                   {history.map((game) => (
                     <div key={game.id} className={`history-item ${game.isWinner ? 'history-item--win' : 'history-item--loss'}`}>
                       <div className="history-result">
-                        {game.isWinner ? '🏆 Victoire' : '❌ Défaite'}
+                        {game.isWinner ? '🏆 Victory' : '❌ Loss'}
                       </div>
                       <div className="history-details">
-                        <span className="history-players">{game.playerCount} joueurs</span>
-                        <span className="history-color">Couleur : {game.playerColor}</span>
+                        <span className="history-players">{game.playerCount} players</span>
+                        <span className="history-color">Color: {game.playerColor}</span>
                         <span className="history-duration">
                           {game.duration > 60
                             ? `${Math.floor(game.duration / 60)}min ${game.duration % 60}s`
@@ -283,7 +283,7 @@ const Profile = () => {
                           }
                         </span>
                         <span className="history-date">
-                          {new Date(game.date).toLocaleDateString('fr-FR', {
+                          {new Date(game.date).toLocaleDateString('en-US', {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric',

@@ -15,7 +15,7 @@ const PlayMode = () => {
 
   const handleCreateRoom = async () => {
     if (!user?.token) {
-      setError('Connecte-toi pour creer une room multijoueur.')
+      setError('Log in to create a multiplayer room.')
       return
     }
 
@@ -35,7 +35,7 @@ const PlayMode = () => {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Impossible de creer la room')
+        throw new Error(data.error || 'Unable to create room')
       }
 
       navigate(`/play/multi/${data.room.code}`)
@@ -48,12 +48,12 @@ const PlayMode = () => {
 
   const handleJoinRoom = async () => {
     if (!user?.token) {
-      setError('Connecte-toi pour rejoindre une room.')
+      setError('Log in to join a room.')
       return
     }
 
     if (!roomCode.trim()) {
-      setError('Entre un code de room.')
+      setError('Enter a room code.')
       return
     }
 
@@ -71,7 +71,7 @@ const PlayMode = () => {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Room introuvable')
+        throw new Error(data.error || 'Room not found')
       }
 
       navigate(`/play/multi/${normalizedCode}`)
@@ -84,11 +84,11 @@ const PlayMode = () => {
 
   return (
     <section className="play-mode">
-      <h1>Multijoueur</h1>
-      <p>Crée une room de 2 à 4 joueurs ou rejoins-en une avec son code.</p>
+      <h1>Multiplayer</h1>
+      <p>Create a room for 2 to 4 players or join one with its code.</p>
 
       <div className="play-mode_card">
-        <h2>Choisis ta room</h2>
+        <h2>Choose your room</h2>
 
         <div className="play-mode_actions">
           {PLAYER_COUNT_OPTIONS.map((count) => (
@@ -99,7 +99,7 @@ const PlayMode = () => {
               onClick={() => setPlayerCount(count)}
               disabled={busy}
             >
-              {count} joueurs
+              {count} players
             </button>
           ))}
         </div>
@@ -111,12 +111,12 @@ const PlayMode = () => {
             onClick={handleCreateRoom}
             disabled={busy}
           >
-            {busy ? 'Creation...' : 'Creer une room'}
+            {busy ? 'Creation...' : 'Create a room'}
           </button>
         </div>
 
         <label className="play-mode_field" htmlFor="room-code">
-          <span>Code de room</span>
+          <span>Room code</span>
           <input
             id="room-code"
             type="text"
@@ -134,7 +134,7 @@ const PlayMode = () => {
             onClick={handleJoinRoom}
             disabled={busy}
           >
-            Rejoindre une room
+            Join a room
           </button>
         </div>
 

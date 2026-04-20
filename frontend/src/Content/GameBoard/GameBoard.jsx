@@ -153,7 +153,7 @@ const roomActionRequest = async (token, code, action, body = null) => {
   const data = await response.json()
 
   if (!response.ok) {
-    throw new Error(data.error || 'Action impossible')
+    throw new Error(data.error || 'Action failed')
   }
 
   return data.room
@@ -174,7 +174,7 @@ const PlayerBadge = ({ color, player }) => (
       </div>
     )}
     <div className="game-board-player_info">
-      <strong>{player?.username ?? 'En attente'}</strong>
+      <strong>{player?.username ?? 'Waiting'}</strong>
       <span>{PLAYER_LABELS[color]}</span>
     </div>
   </div>
@@ -192,10 +192,10 @@ const VictoryOverlay = ({ winnerColor, winnerName }) => (
       <span></span>
     </div>
     <div className="game-board-victory_card">
-      <p className="game-board-victory_label">Victoire</p>
+      <p className="game-board-victory_label">Victory</p>
       <h2>{winnerName}</h2>
       <p className="game-board-victory_subtitle">
-        {PLAYER_LABELS[winnerColor]} atteint le centre.
+        {PLAYER_LABELS[winnerColor]} reaches the center.
       </p>
     </div>
   </div>
@@ -216,7 +216,7 @@ const GameBoard = ({ mode = 'solo' }) => {
   const [pendingRoll, setPendingRoll] = useState(null)
   const [winner, setWinner] = useState(null)
   const [statusMessage, setStatusMessage] = useState(
-    'Lance le de pour commencer la partie.',
+    'Roll the dice to start the game.',
   )
   const [pawnsByPlayer, setPawnsByPlayer] = useState(() =>
     createInitialPawns(PLAYER_ORDER),
@@ -268,12 +268,12 @@ const GameBoard = ({ mode = 'solo' }) => {
       : getMovablePawnIds(pawnsByPlayer, currentPlayer, pendingRoll)
 
   const minimalStatusMessage = displayWinner
-    ? `${PLAYER_LABELS[displayWinner]} a gagne.`
+    ? `${PLAYER_LABELS[displayWinner]} won.`
     : isMultiplayer && roomState?.status === 'waiting'
-      ? 'En attente de joueurs'
+      ? 'Waiting for players'
       : isMyTurn
-        ? 'A votre tour'
-        : "En attente que l'adversaire joue"
+        ? 'Your turn'
+        : 'Waiting for opponent'
   const displayedDieValue = isRollingDice ? rollingFace : (displayLastRoll ?? 1)
   const DisplayedDieIcon = DICE_ICONS[displayedDieValue] ?? DiceOne
   const roomChatMessages = roomState?.chatMessages ?? []
@@ -621,7 +621,7 @@ const GameBoard = ({ mode = 'solo' }) => {
     if (result.winner) {
       setWinner(result.winner)
       setPendingRoll(null)
-      setStatusMessage(`${PLAYER_LABELS[result.winner]} gagne la partie.`)
+      setStatusMessage(`${PLAYER_LABELS[result.winner]} won.`)
 
       const playersData = activePlayers.map((color) => ({
         color,
@@ -635,7 +635,7 @@ const GameBoard = ({ mode = 'solo' }) => {
       finishTurn({
         nextPlayer: currentPlayer,
         keepPlayer: true,
-        message: `${PLAYER_LABELS[currentPlayer]} rejoue grace au 6.`,
+        message: `${PLAYER_LABELS[currentPlayer]} plays again (rolled a 6).`,
       })
       return
     }
@@ -643,7 +643,7 @@ const GameBoard = ({ mode = 'solo' }) => {
     const nextPlayer = getNextPlayer(currentPlayer, activePlayers)
     finishTurn({
       nextPlayer,
-      message: `Tour termine. ${PLAYER_LABELS[nextPlayer]} doit jouer.`,
+      message: `Turn over. ${PLAYER_LABELS[nextPlayer]}'s turn.`,
     })
   }
 
@@ -689,7 +689,7 @@ const GameBoard = ({ mode = 'solo' }) => {
     if (nextMovable.length === 0) {
       const nextPlayer = getNextPlayer(currentPlayer, activePlayers)
       setStatusMessage(
-        `${PLAYER_LABELS[currentPlayer]} a fait ${diceValue}, mais aucun pion ne peut bouger.`,
+        `${PLAYER_LABELS[currentPlayer]} rolled ${diceValue}, but no pawn can move.`,
       )
       setCurrentPlayer(nextPlayer)
       return
@@ -702,7 +702,7 @@ const GameBoard = ({ mode = 'solo' }) => {
 
     setPendingRoll(diceValue)
     setStatusMessage(
-      `${PLAYER_LABELS[currentPlayer]} a fait ${diceValue}. Clique sur un pion lumineux.`,
+      `${PLAYER_LABELS[currentPlayer]} rolled ${diceValue}. Click a glowing pawn.`,
     )
   }
 
@@ -913,8 +913,8 @@ const GameBoard = ({ mode = 'solo' }) => {
           </span>
           <span className="game-board-action_label">
             {roomBusy || animatingPawnId || isRollingDice
-              ? 'Lancement...'
-              : 'Lancer le de'}
+              ? 'Rolling...'
+              : 'Roll the dice'}
           </span>
         </button>
       </div>
@@ -934,7 +934,7 @@ const GameBoard = ({ mode = 'solo' }) => {
                 </>
               </div>
               <Link to="/play" className="game-board-back">
-                Quitter la room
+                Leave room
               </Link>
             </div>
 
@@ -949,8 +949,8 @@ const GameBoard = ({ mode = 'solo' }) => {
                 title={
                   roomError ||
                   (displayPendingRoll !== null
-                    ? 'Choisis un pion.'
-                    : 'Chat de room')
+                    ? 'Choose a pawn.'
+                    : 'Room chat')
                 }
               />
             </div>

@@ -3,6 +3,13 @@ import { useAuth } from '../../contexts/AuthContext'
 import { Link, useNavigate } from 'react-router'
 import './Leaderboard.scss'
 
+const getOrdinal = (num) => {
+  if (num === 1) return '1st'
+  if (num === 2) return '2nd'
+  if (num === 3) return '3rd'
+  return `${num}th`
+}
+
 const Leaderboard = () => {
   const { user } = useAuth()
   const [players, setPlayers] = useState([])
@@ -48,10 +55,10 @@ const Leaderboard = () => {
         </div>
 
         {loading ? (
-          <p className="empty-state" style={{ textAlign: 'center', padding: '3rem' }}>Chargement...</p>
+          <p className="empty-state" style={{ textAlign: 'center', padding: '3rem' }}>Loading...</p>
         ) : sortedPlayers.length === 0 ? (
           <p className="empty-state" style={{ textAlign: 'center', padding: '3rem' }}>
-            Aucun joueur classé pour l'instant. Joue une partie pour apparaître ici !
+            No ranked players yet. Play a game to appear here!
           </p>
         ) : (
           <>
@@ -60,7 +67,7 @@ const Leaderboard = () => {
               <div className="podium">
                 {topThree.map((player, i) => (
                   <div key={player.id} className={`podium-card podium-${i + 1}`}>
-                    <span className="podium-rank">{i + 1}{i === 0 ? 'er' : 'e'}</span>
+                    <span className="podium-rank">{getOrdinal(i + 1)}</span>
                     
                     {/* On entoure l'avatar et le nom avec le Link */}
                     <Link to={`/profile/${player.id}`} style={{ textDecoration: 'none', display: 'contents' }}>
@@ -74,7 +81,7 @@ const Leaderboard = () => {
                       <span className="podium-name">{player.username}</span>
                     </Link>
 
-                    <span className="podium-wins">{player.wins} victoire{player.wins > 1 ? 's' : ''}</span>
+                    <span className="podium-wins">{player.wins} win{player.wins > 1 ? 's' : ''}</span>
                   </div>
                 ))}
               </div>
@@ -93,7 +100,7 @@ const Leaderboard = () => {
                     </span>
                   )}
                 </div>
-                <span className="lb-name">{currentUserRank.username} (toi)</span>
+                <span className="lb-name">{currentUserRank.username} (you)</span>
                 <div className="lb-bar-area">
                   <div
                     className="lb-bar"
@@ -122,7 +129,7 @@ const Leaderboard = () => {
                           </span>
                         )}
                       </div>
-                      <span className="lb-name">{player.username}{isCurrentUser ? ' (toi)' : ''}</span>
+                      <span className="lb-name">{player.username}{isCurrentUser ? ' (you)' : ''}</span>
                     </Link>
                     <div className="lb-bar-area">
                       <div

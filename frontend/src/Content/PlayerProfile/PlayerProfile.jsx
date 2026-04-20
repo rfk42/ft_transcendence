@@ -85,8 +85,8 @@ const PlayerProfile = () => {
     if (id) fetchPlayerData()
   }, [id, currentUser]) // <-- TRÈS IMPORTANT : Ajoute currentUser ici
 
-  if (loading) return <div className="profile-container">Chargement...</div>
-  if (!player) return <div className="profile-container">Joueur non trouvé</div>
+  if (loading) return <div className="profile-container">Loading...</div>
+  if (!player) return <div className="profile-container">Player not found</div>
 
   return (
     <div className="profile-container">
@@ -113,11 +113,11 @@ const PlayerProfile = () => {
                   onClick={handleAddFriend}
                   disabled={friendStatus !== 'none'}
                 >
-                  {friendStatus === 'none' && 'Ajouter en ami'}
-                  {friendStatus === 'sending' && 'Envoi...'}
-                  {friendStatus === 'sent' && 'Demande envoyée'}
-                  {friendStatus === 'received' && 'Demande reçue'}
-                  {friendStatus === 'friends' && '✓ Amis'}
+                  {friendStatus === 'none' && 'Add friend'}
+                  {friendStatus === 'sending' && 'Sending...'}
+                  {friendStatus === 'sent' && 'Request sent'}
+                  {friendStatus === 'received' && 'Request received'}
+                  {friendStatus === 'friends' && '✓ Friends'}
                 </button>
               </div>
             )}
@@ -127,12 +127,12 @@ const PlayerProfile = () => {
         <div className="profile-stats">
           <div className="stat-box">
             <span className="stat-value">{player.wins}</span>
-            <span className="stat-label">Victoires</span>
+            <span className="stat-label">Wins</span>
           </div>
 
           <div className="stat-box">
             <span className="stat-value">{player.gamesPlayed}</span>
-            <span className="stat-label">Parties</span>
+            <span className="stat-label">Games</span>
           </div>
 
           <div className="stat-box">

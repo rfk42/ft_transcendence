@@ -19,7 +19,7 @@ const RoomChat = ({
   onChange,
   onSubmit,
   disabled,
-  title = 'Chat de room',
+  title = 'Room chat',
 }) => {
   const chatListRef = useRef(null)
 
@@ -60,12 +60,12 @@ const RoomChat = ({
           type="text"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder="Ecrire un message..."
+          placeholder="Write a message..."
           maxLength={300}
           disabled={disabled}
         />
         <button type="submit" disabled={disabled || !value.trim()}>
-          Envoyer
+          Send
         </button>
       </form>
     </aside>

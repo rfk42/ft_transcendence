@@ -53,13 +53,13 @@ const createRoom = ({userId, username, avatarUrl, playerCount}) => {
     pendingRoll: null,
     winner: null,
     status: "waiting",
-    statusMessage: "Room creee. En attente des joueurs.",
+    statusMessage: "Room created. Waiting for players.",
     chatMessages: [
       {
         id: crypto.randomUUID(),
         userId: null,
-        username: "Systeme",
-        text: `Room ${playerCount} joueurs creee.`,
+        username: "System",
+        text: `Room with ${playerCount} players created.`,
         createdAt: new Date().toISOString(),
       },
     ],
@@ -77,7 +77,7 @@ const joinRoom = ({code, userId, username, avatarUrl}) => {
   const room = getRoom(code);
 
   if (!room) {
-    return {error: "Room introuvable"};
+    return {error: "Room not found"};
   }
 
   const existingPlayer = room.players.find(
@@ -88,7 +88,7 @@ const joinRoom = ({code, userId, username, avatarUrl}) => {
   }
 
   if (room.players.length >= room.playerCount) {
-    return {error: "La room est complete"};
+    return {error: "Room is full"};
   }
 
   const usedColors = new Set(room.players.map((player) => player.color));
@@ -98,8 +98,8 @@ const joinRoom = ({code, userId, username, avatarUrl}) => {
   room.chatMessages.push({
     id: crypto.randomUUID(),
     userId: null,
-    username: "Systeme",
-    text: `${username} a rejoint la room.`,
+    username: "System",
+    text: `${username} joined the room.`,
     createdAt: new Date().toISOString(),
   });
   room.status =
@@ -109,8 +109,8 @@ const joinRoom = ({code, userId, username, avatarUrl}) => {
   }
   room.statusMessage =
     room.status === "playing"
-      ? `${room.currentPlayer} commence.`
-      : `${username} a rejoint la room.`;
+      ? `${room.currentPlayer} starts.`
+      : `${username} joined the room.`;
 
   return {room, joined: true};
 };
@@ -119,17 +119,17 @@ const addRoomMessage = ({code, userId, username, text}) => {
   const room = getRoom(code);
 
   if (!room) {
-    return {error: "Room introuvable"};
+    return {error: "Room not found"};
   }
 
   const player = room.players.find((entry) => entry.userId === userId);
   if (!player) {
-    return {error: "Tu ne fais pas partie de cette room"};
+    return {error: "You are not part of this room"};
   }
 
   const trimmedText = String(text ?? "").trim();
   if (!trimmedText) {
-    return {error: "Message vide"};
+    return {error: "Empty message"};
   }
 
   room.chatMessages.push({
@@ -148,20 +148,20 @@ const rollDice = ({code, userId}) => {
   const room = getRoom(code);
 
   if (!room) {
-    return {error: "Room introuvable"};
+    return {error: "Room not found"};
   }
 
   const player = room.players.find((entry) => entry.userId === userId);
   if (!player) {
-    return {error: "Tu ne fais pas partie de cette room"};
+    return {error: "You are not part of this room"};
   }
 
   if (room.status !== "playing") {
-    return {error: "La partie n'a pas encore commence"};
+    return {error: "Game has not started yet"};
   }
 
   if (room.currentPlayer !== player.color) {
-    return {error: "Ce n'est pas ton tour"};
+    return {error: "It's not your turn"};
   }
 
   const diceValue = Math.floor(Math.random() * 6) + 1;
@@ -174,7 +174,7 @@ const rollDice = ({code, userId}) => {
 
   if (movablePawnIds.length === 0) {
     room.currentPlayer = getNextPlayer(room.currentPlayer, room.activePlayers);
-    room.statusMessage = `${player.username} a fait ${diceValue}, mais aucun pion ne peut bouger.`;
+    room.statusMessage = `${player.username} rolled ${diceValue}, but no pawn can move.`;
     return {room};
   }
 
@@ -188,7 +188,7 @@ const rollDice = ({code, userId}) => {
   }
 
   room.pendingRoll = diceValue;
-  room.statusMessage = `${player.username} a fait ${diceValue}. Choisis un pion.`;
+  room.statusMessage = `${player.username} rolled ${diceValue}. Choose a pawn.`;
   return {room};
 };
 
@@ -196,21 +196,21 @@ const movePawn = ({code, userId, pawnId, forcedRoll = null}) => {
   const room = getRoom(code);
 
   if (!room) {
-    return {error: "Room introuvable"};
+    return {error: "Room not found"};
   }
 
   const player = room.players.find((entry) => entry.userId === userId);
   if (!player) {
-    return {error: "Tu ne fais pas partie de cette room"};
+    return {error: "You are not part of this room"};
   }
 
   if (room.currentPlayer !== player.color) {
-    return {error: "Ce n'est pas ton tour"};
+    return {error: "It's not your turn"};
   }
 
   const roll = forcedRoll ?? room.pendingRoll;
   if (roll === null) {
-    return {error: "Aucun lancer en attente"};
+    return {error: "No pending roll"};
   }
 
   const movablePawnIds = getMovablePawnIds(
@@ -219,7 +219,7 @@ const movePawn = ({code, userId, pawnId, forcedRoll = null}) => {
     roll,
   );
   if (!movablePawnIds.includes(pawnId)) {
-    return {error: "Ce pion ne peut pas bouger"};
+    return {error: "This pawn cannot move"};
   }
 
   const result = applyPawnMove(
@@ -235,17 +235,17 @@ const movePawn = ({code, userId, pawnId, forcedRoll = null}) => {
   if (result.winner) {
     room.winner = result.winner;
     room.status = "finished";
-    room.statusMessage = `${player.username} gagne la partie.`;
+    room.statusMessage = `${player.username} won the game.`;
     return {room};
   }
 
   if (roll === 6) {
-    room.statusMessage = `${player.username} rejoue grace au 6.`;
+    room.statusMessage = `${player.username} plays again (rolled a 6).`;
     return {room};
   }
 
   room.currentPlayer = getNextPlayer(room.currentPlayer, room.activePlayers);
-  room.statusMessage = `Tour termine. ${room.currentPlayer} doit jouer.`;
+  room.statusMessage = `Turn over. ${room.currentPlayer}'s turn.`;
   return {room};
 };
 

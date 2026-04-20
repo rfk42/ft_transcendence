@@ -81,7 +81,7 @@ const Header = () => {
               <button 
                 className="notifications-btn"
                 onClick={() => setShowDropdown(!showDropdown)}
-                aria-label="Demandes d'ami"
+                aria-label="Friend requests"
               >
                 {/* Ton icône SVG */}
                 <svg 
@@ -111,10 +111,10 @@ const Header = () => {
               {/* Menu déroulant */}
               {showDropdown && (
                 <div className="notifications-dropdown">
-                  <div className="dropdown-header">Demandes d'ami</div>
+                  <div className="dropdown-header">Friend requests</div>
                   
                   {pendingRequests.length === 0 ? (
-                    <div className="dropdown-empty">Aucune demande en attente</div>
+                    <div className="dropdown-empty">No pending requests</div>
                   ) : (
                     <div className="dropdown-list">
                       {pendingRequests.map(req => (
@@ -134,14 +134,14 @@ const Header = () => {
                             <button 
                               className="btn-accept" 
                               onClick={() => handleRequestResponse(req.relationId, 'accept')}
-                              title="Accepter"
+                              title="Accept"
                             >
                               ✓
                             </button>
                             <button 
                               className="btn-decline" 
                               onClick={() => handleRequestResponse(req.relationId, 'decline')}
-                              title="Refuser"
+                              title="Decline"
                             >
                               ✕
                             </button>

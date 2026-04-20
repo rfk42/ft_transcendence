@@ -96,12 +96,12 @@ const AuthForm = ({ mode = 'login' }) => {
       // Validation pour register
       if (mode === 'register') {
         if (!formData.username) {
-          setError("Nom d'utilisateur requis")
+          setError("Username required")
           setLoading(false)
           return
         }
         if (formData.password !== formData.confirmPassword) {
-          setError('Les mots de passe ne correspondent pas')
+          setError('Passwords do not match')
           setLoading(false)
           return
         }
@@ -129,7 +129,7 @@ const AuthForm = ({ mode = 'login' }) => {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || 'Une erreur est survenue')
+        setError(data.error || 'An error occurred')
         setLoading(false)
         return
       }
@@ -142,7 +142,7 @@ const AuthForm = ({ mode = 'login' }) => {
       // Redirection
       navigate('/')
     } catch (err) {
-      setError(err.message || 'Erreur de connexion')
+      setError(err.message || 'Connection error')
       setLoading(false)
     }
   }
@@ -173,7 +173,7 @@ const AuthForm = ({ mode = 'login' }) => {
           ))}
 
           <button type="submit" className="auth-submit" disabled={loading}>
-            {loading ? 'Chargement...' : content.submitLabel}
+            {loading ? 'Loading...' : content.submitLabel}
           </button>
         </form>
 
@@ -183,7 +183,7 @@ const AuthForm = ({ mode = 'login' }) => {
         </p>
 
         <div className="auth-divider">
-          <span>ou</span>
+          <span>or</span>
         </div>
 
         <a href="/api/auth/google" className="auth-google-btn">
