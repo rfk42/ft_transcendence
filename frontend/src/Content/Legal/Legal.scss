@@ -3,13 +3,13 @@
   justify-content: center;
   align-items: flex-start;
   width: 100%;
-  padding: 2rem 1rem;
   min-height: 100vh;
+  padding: 2rem 1rem;
 }
 
 .legal-card {
-  width: min(50rem, 100%);
-  padding: 3rem;
+  width: min(60rem, 100%);
+  padding: 2rem;
   border: 2px solid rgba(255, 255, 255, 0.1);
   border-radius: 1.5rem;
   background: #1a1a2e;
@@ -18,39 +18,92 @@
 
   h1 {
     text-align: center;
-    font-size: 2.5rem;
+    font-size: clamp(2rem, 4vw, 2.75rem);
     color: #fff;
-    margin-bottom: 2rem;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 1rem;
+    margin: 0 0 1rem;
   }
 
   h2 {
-    font-size: 1.3rem;
-    color: #3b82f6; // Le bleu de ton site pour les sous-titres
-    margin: 2rem 0 1rem;
+    font-size: 1.15rem;
+    color: #3b82f6;
+    margin: 0 0 0.9rem;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.08em;
   }
 
   p {
-    line-height: 1.6;
-    margin-bottom: 0.8rem;
-    color: #a0a0b8;
-
-    strong {
-      color: #fff;
-    }
+    line-height: 1.7;
+    margin-bottom: 0.9rem;
+    color: #c7c7db;
   }
 
   a {
-    color: #c9a84c; // Le doré de ton site pour les liens (OVH / Email)
+    color: #c9a84c;
     text-decoration: none;
-    transition: color 0.2s;
+    transition: color 0.2s ease;
 
     &:hover {
-      text-decoration: underline;
       color: #fff;
+      text-decoration: underline;
     }
+  }
+}
+
+.legal-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.legal-nav__link {
+  padding: 0.7rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  color: #e0e0e0;
+  background: rgba(255, 255, 255, 0.04);
+  font-weight: 600;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+
+  &:hover {
+    color: #fff;
+    border-color: rgba(201, 168, 76, 0.7);
+    transform: translateY(-1px);
+  }
+
+  &.is-active {
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.55);
+    color: #fff;
+  }
+}
+
+.legal-lead {
+  margin: 0 auto 2rem;
+  max-width: 44rem;
+  text-align: center;
+  color: #aeb3d3;
+}
+
+.legal-section + .legal-section {
+  margin-top: 2rem;
+}
+
+@media (max-width: 640px) {
+  .legal-card {
+    padding: 1.5rem;
+  }
+
+  .legal-nav {
+    flex-direction: column;
+  }
+
+  .legal-nav__link {
+    text-align: center;
   }
 }

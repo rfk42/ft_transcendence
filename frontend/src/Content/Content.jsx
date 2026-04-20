@@ -1,4 +1,4 @@
-﻿import GameBoard from './GameBoard/GameBoard.jsx'
+import GameBoard from './GameBoard/GameBoard.jsx'
 import AuthForm from './Auth/AuthForm.jsx'
 import OAuthCallback from './Auth/OAuthCallback.jsx'
 import Profile from './Profile/Profile.jsx'
@@ -40,6 +40,8 @@ const Content = () => (
       <Route path="/profile/:id" element={<ProfilePlayer />} />
       <Route path="/friends" element={<Friends />} />
       <Route path="/legal" element={<Legal />} />
+      <Route path="/privacy-policy" element={<Legal />} />
+      <Route path="/terms-of-service" element={<Legal />} />
     </Routes>
   </section>
 )
