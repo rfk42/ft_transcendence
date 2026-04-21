@@ -9,6 +9,7 @@ const prisma = require("../db");
 const authenticate = require("../middleware/auth");
 const {
   BLOB_ENABLED,
+  IS_SERVERLESS,
   LOCAL_UPLOAD_DIR,
   avatarBlobUrl,
   blobPathFromUrl,
@@ -85,6 +86,10 @@ function localAvatarFilenameFromUrl(url) {
   } catch {
     return null;
   }
+}
+
+function isInlineAvatar(url) {
+  return typeof url === "string" && url.startsWith("data:image/");
 }
 
 // Retire les champs sensibles (hash du mdp, secret 2FA) avant d'envoyer le user au client
@@ -447,7 +452,9 @@ router.post("/me/avatar", authenticate, (req, res) => {
     try {
       const current = await prisma.user.findUnique({where: {id: req.userId}});
 
-      if (current?.avatarUrl?.startsWith("/api/auth/avatar?pathname=")) {
+      if (isInlineAvatar(current?.avatarUrl)) {
+        // Nothing to delete: the avatar is stored inline in the database.
+      } else if (current?.avatarUrl?.startsWith("/api/auth/avatar?pathname=")) {
         const oldBlobPath = blobPathFromUrl(current.avatarUrl);
         if (oldBlobPath) {
           await deleteBlob(oldBlobPath);
@@ -476,7 +483,9 @@ router.post("/me/avatar", authenticate, (req, res) => {
               )
             ).pathname,
           )
-        : localAvatarUrl(req.file.filename);
+        : IS_SERVERLESS
+          ? `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`
+          : localAvatarUrl(req.file.filename);
 
       const user = await prisma.user.update({
         where: {id: req.userId},
@@ -496,7 +505,9 @@ router.delete("/me/avatar", authenticate, async (req, res) => {
     const user = await prisma.user.findUnique({where: {id: req.userId}});
     if (!user) return res.status(404).json({error: "Utilisateur introuvable"});
 
-    if (user.avatarUrl?.startsWith("/api/auth/avatar?pathname=")) {
+    if (isInlineAvatar(user.avatarUrl)) {
+      // Nothing to delete: the avatar is stored inline in the database.
+    } else if (user.avatarUrl?.startsWith("/api/auth/avatar?pathname=")) {
       const blobPath = blobPathFromUrl(user.avatarUrl);
       if (blobPath) {
         await deleteBlob(blobPath);
