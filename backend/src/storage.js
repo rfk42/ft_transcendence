@@ -2,8 +2,11 @@ const fs = require("fs");
 const path = require("path");
 
 const BLOB_ENABLED = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+const IS_SERVERLESS =
+  process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
 const LOCAL_UPLOAD_DIR =
-  process.env.UPLOAD_DIR || path.join(__dirname, "..", "uploads");
+  process.env.UPLOAD_DIR ||
+  (IS_SERVERLESS ? "/tmp/ft-transcendence-uploads" : path.join(__dirname, "..", "uploads"));
 
 function requireBlobSdk() {
   try {
@@ -79,6 +82,7 @@ function ensureLocalDir(dir) {
 
 module.exports = {
   BLOB_ENABLED,
+  IS_SERVERLESS,
   LOCAL_UPLOAD_DIR,
   avatarBlobUrl,
   blobPathFromUrl,
