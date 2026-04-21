@@ -414,7 +414,6 @@ const GameBoard = ({ mode = 'solo' }) => {
       pendingRoll !== null ||
       animatingPawnId ||
       !boardReady ||
-      isRollingDice ||
       aiTurnInFlightRef.current
     ) {
       return undefined
@@ -492,7 +491,6 @@ const GameBoard = ({ mode = 'solo' }) => {
     boardReady,
     currentPlayer,
     isComputerGame,
-    isRollingDice,
     pawnsByPlayer,
     pendingRoll,
     winner,

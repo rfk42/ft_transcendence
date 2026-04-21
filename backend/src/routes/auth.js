@@ -43,7 +43,7 @@ const avatarStorage = multer.diskStorage({
 });
 
 const avatarUpload = multer({
-  storage: BLOB_ENABLED ? multer.memoryStorage() : avatarStorage,
+  storage: BLOB_ENABLED || IS_SERVERLESS ? multer.memoryStorage() : avatarStorage,
   limits: {fileSize: 5 * 1024 * 1024}, // 5 Mo max
   fileFilter: (_req, file, cb) => {
     const allowed = ["image/jpeg", "image/png", "image/webp"];
