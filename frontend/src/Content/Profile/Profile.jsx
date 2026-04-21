@@ -96,6 +96,7 @@ const Profile = () => {
       const data = JSON.parse(xhr.responseText)
       setUploadProgress(100) // passe à 100% visuellement
       if (xhr.status >= 200 && xhr.status < 300) {
+        setAvatarFailed(false)
         updateUser(data.user)
         const img = new Image()
         img.onload = () => {

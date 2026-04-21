@@ -428,6 +428,13 @@ const GameBoard = ({ mode = 'solo' }) => {
       return
     }
 
+    const expectedStepCount = roomState.lastRoll ?? previousRoomState.lastRoll ?? null
+    if (expectedStepCount !== null && path.length > expectedStepCount) {
+      setAnimatedPawnsByPlayer(null)
+      setAnimatingPawnId(null)
+      return
+    }
+
     const runId = ++animationRunRef.current
     let nextAnimatedState = clonePawnsByPlayer(
       previousRoomState.pawnsByPlayer,

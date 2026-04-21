@@ -74,6 +74,19 @@ function validateLogin({username, password}) {
   return null;
 }
 
+function localAvatarUrl(filename) {
+  return `/api/auth/avatar-local?filename=${encodeURIComponent(filename)}`;
+}
+
+function localAvatarFilenameFromUrl(url) {
+  try {
+    const parsed = new URL(url, "http://local.test");
+    return parsed.searchParams.get("filename");
+  } catch {
+    return null;
+  }
+}
+
 // Retire les champs sensibles (hash du mdp, secret 2FA) avant d'envoyer le user au client
 function sanitizeUser(user) {
   const {passwordHash, twofaSecret, ...safe} = user;
@@ -439,6 +452,12 @@ router.post("/me/avatar", authenticate, (req, res) => {
         if (oldBlobPath) {
           await deleteBlob(oldBlobPath);
         }
+      } else if (current?.avatarUrl?.startsWith("/api/auth/avatar-local?filename=")) {
+        const localFilename = localAvatarFilenameFromUrl(current.avatarUrl);
+        if (localFilename) {
+          const oldPath = path.join(AVATAR_DIR, path.basename(localFilename));
+          fs.unlink(oldPath, () => {});
+        }
       } else if (current?.avatarUrl?.startsWith("/uploads/avatars/")) {
         const oldPath = path.join(
           UPLOAD_DIR,
@@ -457,7 +476,7 @@ router.post("/me/avatar", authenticate, (req, res) => {
               )
             ).pathname,
           )
-        : `/uploads/avatars/${req.file.filename}`;
+        : localAvatarUrl(req.file.filename);
 
       const user = await prisma.user.update({
         where: {id: req.userId},
@@ -481,6 +500,12 @@ router.delete("/me/avatar", authenticate, async (req, res) => {
       const blobPath = blobPathFromUrl(user.avatarUrl);
       if (blobPath) {
         await deleteBlob(blobPath);
+      }
+    } else if (user.avatarUrl?.startsWith("/api/auth/avatar-local?filename=")) {
+      const localFilename = localAvatarFilenameFromUrl(user.avatarUrl);
+      if (localFilename) {
+        const filePath = path.join(AVATAR_DIR, path.basename(localFilename));
+        fs.unlink(filePath, () => {});
       }
     } else if (user.avatarUrl?.startsWith("/uploads/avatars/")) {
       const filePath = path.join(
@@ -538,6 +563,22 @@ router.get("/avatar", async (req, res) => {
     console.error("Avatar fetch error:", blobError);
     return res.status(404).json({error: "Avatar not found"});
   }
+});
+
+router.get("/avatar-local", (req, res) => {
+  const filename = path.basename(String(req.query.filename || ""));
+
+  if (!filename) {
+    return res.status(400).json({error: "Invalid avatar filename"});
+  }
+
+  const filePath = path.join(AVATAR_DIR, filename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({error: "Avatar not found"});
+  }
+
+  return res.sendFile(filePath);
 });
 
 module.exports = router;
