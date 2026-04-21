@@ -32,6 +32,7 @@ import RoomChat from './RoomChat.jsx'
 const STEP_ANIMATION_MS = 170
 const ROOM_POLL_MS = 1500
 const DICE_ROLL_MIN_MS = 650
+const AI_TURN_DELAY_MS = 700
 
 const DICE_ICONS = {
   1: DiceOne,
@@ -105,6 +106,42 @@ const findMovedPawnBetweenStates = (previousPawns, nextPawns, playerOrder) => {
   }
 
   return null
+}
+
+const pickComputerPawn = (pawnsByPlayer, playerColor, roll, playerOrder) => {
+  const options = getMovablePawnIds(pawnsByPlayer, playerColor, roll)
+  if (options.length === 0) {
+    return null
+  }
+
+  const scoredOptions = options.map((pawnId) => {
+    const pawn = (pawnsByPlayer[playerColor] ?? []).find((entry) => entry.id === pawnId)
+    const result = applyPawnMove(pawnsByPlayer, pawnId, roll, playerOrder)
+    const movedPawn = result.movedPawn
+
+    const opponentsBefore = playerOrder
+      .filter((color) => color !== playerColor)
+      .flatMap((color) => pawnsByPlayer[color] ?? [])
+    const opponentsAfter = playerOrder
+      .filter((color) => color !== playerColor)
+      .flatMap((color) => result.pawns[color] ?? [])
+
+    const captures = opponentsBefore.filter((beforePawn) => {
+      const afterPawn = opponentsAfter.find((entry) => entry.id === beforePawn.id)
+      return beforePawn.progress >= 0 && afterPawn?.progress === -1
+    }).length
+
+    let score = movedPawn.progress
+    if (captures > 0) score += 100
+    if (movedPawn.progress === 0 && pawn?.progress < 0) score += 25
+    if (result.winner) score += 1000
+    if (roll === 6) score += 10
+
+    return { pawnId, score }
+  })
+
+  scoredOptions.sort((left, right) => right.score - left.score)
+  return scoredOptions[0]?.pawnId ?? options[0]
 }
 
 const fetchRoomRequest = async (token, code) => {
@@ -201,6 +238,11 @@ const VictoryOverlay = ({ winnerColor, winnerName }) => (
   </div>
 )
 
+const AI_PLAYERS = [
+  { color: 'blue', username: 'You', avatarUrl: null },
+  { color: 'green', username: 'Computer', avatarUrl: null },
+]
+
 const GameBoard = ({ mode = 'solo' }) => {
   const { user } = useAuth()
   const { code } = useParams()
@@ -235,9 +277,12 @@ const GameBoard = ({ mode = 'solo' }) => {
   const [isRollingDice, setIsRollingDice] = useState(false)
 
   const isMultiplayer = mode === 'multi'
+  const isComputerGame = mode === 'ai'
   const activePlayers = isMultiplayer
     ? (roomState?.activePlayers ?? [])
-    : getPlayersForCount(playerCount)
+    : isComputerGame
+      ? ['blue', 'green']
+      : getPlayersForCount(playerCount)
   const visiblePawnsByPlayer = animatedPawnsByPlayer ?? pawnsByPlayer
   const displayPawnsByPlayer = isMultiplayer
     ? (animatedPawnsByPlayer ??
@@ -260,7 +305,8 @@ const GameBoard = ({ mode = 'solo' }) => {
     winningPlayer?.username ??
     (displayWinner ? PLAYER_LABELS[displayWinner] : '')
   const myColor = roomState?.me?.color ?? null
-  const isMyTurn = !isMultiplayer || myColor === displayCurrentPlayer
+  const humanColor = isComputerGame ? 'blue' : myColor
+  const isMyTurn = isMultiplayer ? myColor === displayCurrentPlayer : displayCurrentPlayer === humanColor
   const movablePawnIds = isMultiplayer
     ? (roomState?.movablePawnIds ?? [])
     : pendingRoll === null || winner || animatingPawnId || !boardReady
@@ -347,7 +393,7 @@ const GameBoard = ({ mode = 'solo' }) => {
   }, [])
 
   useEffect(() => {
-    if (isMultiplayer || !user?.token) return
+    if (isMultiplayer || isComputerGame || !user?.token) return
 
     const initGame = async () => {
       const players = getPlayersForCount(playerCount)
@@ -357,7 +403,74 @@ const GameBoard = ({ mode = 'solo' }) => {
     }
 
     initGame()
-  }, [createGameInDB, isMultiplayer, playerCount, user])
+  }, [createGameInDB, isComputerGame, isMultiplayer, playerCount, user])
+
+  useEffect(() => {
+    if (!isComputerGame || winner || pendingRoll !== null || animatingPawnId || !boardReady) {
+      return undefined
+    }
+
+    if (currentPlayer !== 'green') {
+      return undefined
+    }
+
+    let cancelled = false
+
+    const playComputerTurn = async () => {
+      await wait(AI_TURN_DELAY_MS)
+      if (cancelled || currentPlayer !== 'green') {
+        return
+      }
+
+      const diceValue = Math.floor(Math.random() * 6) + 1
+      const startedAt = startDiceRolling()
+      await stopDiceRolling(diceValue, startedAt)
+
+      if (cancelled) {
+        return
+      }
+
+      const nextMovable = getMovablePawnIds(pawnsByPlayer, currentPlayer, diceValue)
+      setLastRoll(diceValue)
+
+      if (nextMovable.length === 0) {
+        const nextPlayer = getNextPlayer(currentPlayer, activePlayers)
+        setStatusMessage(
+          `${PLAYER_LABELS[currentPlayer]} rolled ${diceValue}, but no pawn can move.`,
+        )
+        setCurrentPlayer(nextPlayer)
+        return
+      }
+
+      const pawnId =
+        nextMovable.length === 1
+          ? nextMovable[0]
+          : pickComputerPawn(pawnsByPlayer, currentPlayer, diceValue, activePlayers)
+
+      if (!pawnId) {
+        const nextPlayer = getNextPlayer(currentPlayer, activePlayers)
+        setCurrentPlayer(nextPlayer)
+        return
+      }
+
+      await playPawn(pawnId, diceValue)
+    }
+
+    void playComputerTurn()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    activePlayers,
+    animatingPawnId,
+    boardReady,
+    currentPlayer,
+    isComputerGame,
+    pawnsByPlayer,
+    pendingRoll,
+    winner,
+  ])
 
   useEffect(() => {
     if (!isMultiplayer || !user?.token || !code) {
@@ -678,7 +791,7 @@ const GameBoard = ({ mode = 'solo' }) => {
       return
     }
 
-    if (winner || pendingRoll !== null || animatingPawnId || !boardReady) {
+    if (winner || pendingRoll !== null || animatingPawnId || !boardReady || (isComputerGame && currentPlayer !== 'blue')) {
       return
     }
 
@@ -783,14 +896,16 @@ const GameBoard = ({ mode = 'solo' }) => {
   return (
     <section className="game-board-shell">
       <div className="game-board-stage">
-        {isMultiplayer
+        {isMultiplayer || isComputerGame
           ? activePlayers.map((color) => (
             <PlayerBadge
               key={color}
               color={color}
-              player={roomState?.players?.find(
-                (player) => player.color === color,
-              )}
+              player={
+                isMultiplayer
+                  ? roomState?.players?.find((player) => player.color === color)
+                  : AI_PLAYERS.find((player) => player.color === color)
+              }
             />
           ))
           : null}
@@ -912,6 +1027,7 @@ const GameBoard = ({ mode = 'solo' }) => {
               pendingRoll !== null ||
               animatingPawnId !== null ||
               !boardReady ||
+              (isComputerGame && currentPlayer !== 'blue') ||
               isRollingDice
           }
         >

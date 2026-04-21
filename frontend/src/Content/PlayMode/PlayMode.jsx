@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useAuth } from '../../contexts/AuthContext'
 import './PlayMode.scss'
 
@@ -84,11 +84,24 @@ const PlayMode = () => {
 
   return (
     <section className="play-mode">
-      <h1>Multiplayer</h1>
-      <p>Create a room for 2 to 4 players or join one with its code.</p>
+      <h1>Play Ludo</h1>
+      <p>Choose a local challenge, face the computer, or create a multiplayer room.</p>
 
       <div className="play-mode_card">
-        <h2>Choose your room</h2>
+        <h2>Solo modes</h2>
+
+        <div className="play-mode_actions">
+          <Link to="/play/solo" className="play-mode_button">
+            Local practice
+          </Link>
+          <Link to="/play/ai" className="play-mode_button">
+            Vs computer
+          </Link>
+        </div>
+      </div>
+
+      <div className="play-mode_card">
+        <h2>Multiplayer</h2>
 
         <div className="play-mode_actions">
           {PLAYER_COUNT_OPTIONS.map((count) => (
