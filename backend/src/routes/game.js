@@ -177,6 +177,10 @@ const recordRoomGameIfFinished = async (room) => {
   });
 
   room.statsRecorded = true;
+  await prisma.roomSession.update({
+    where: {code: room.code},
+    data: {statsRecorded: true},
+  });
 };
 
 router.post("/rooms", authenticate, async (req, res) => {
@@ -196,7 +200,7 @@ router.post("/rooms", authenticate, async (req, res) => {
       return res.status(404).json({error: "Utilisateur introuvable"});
     }
 
-    const room = createRoom({
+    const room = await createRoom({
       userId: user.id,
       username: user.username,
       avatarUrl: user.avatarUrl,
@@ -215,9 +219,12 @@ router.post("/rooms", authenticate, async (req, res) => {
         },
       },
     });
-    room.gameId = game.id;
+    const updatedRoom = await prisma.roomSession.update({
+      where: {code: room.code},
+      data: {gameId: game.id},
+    });
 
-    res.json({room: getRoomPublicState(room, user.id)});
+    res.json({room: getRoomPublicState(updatedRoom, user.id)});
   } catch (err) {
     console.error("Erreur creation room:", err);
     res.status(500).json({error: "Erreur serveur"});
@@ -235,7 +242,7 @@ router.post("/rooms/:code/join", authenticate, async (req, res) => {
       return res.status(404).json({error: "Utilisateur introuvable"});
     }
 
-    const result = joinRoom({
+    const result = await joinRoom({
       code: req.params.code,
       userId: user.id,
       username: user.username,
@@ -282,8 +289,8 @@ router.post("/rooms/:code/join", authenticate, async (req, res) => {
   }
 });
 
-router.get("/rooms/:code", authenticate, (req, res) => {
-  const room = getRoom(req.params.code);
+router.get("/rooms/:code", authenticate, async (req, res) => {
+  const room = await getRoom(req.params.code);
 
   if (!room) {
     return res.status(404).json({error: "Room introuvable"});
@@ -295,7 +302,7 @@ router.get("/rooms/:code", authenticate, (req, res) => {
 router.post("/rooms/:code/roll", authenticate, (req, res) => {
   Promise.resolve()
     .then(async () => {
-      const result = rollDice({
+      const result = await rollDice({
         code: req.params.code,
         userId: req.userId,
       });
@@ -316,7 +323,7 @@ router.post("/rooms/:code/roll", authenticate, (req, res) => {
 router.post("/rooms/:code/move", authenticate, (req, res) => {
   Promise.resolve()
     .then(async () => {
-      const result = movePawn({
+      const result = await movePawn({
         code: req.params.code,
         userId: req.userId,
         pawnId: req.body.pawnId,
@@ -346,7 +353,7 @@ router.post("/rooms/:code/chat", authenticate, async (req, res) => {
       return res.status(404).json({error: "Utilisateur introuvable"});
     }
 
-    const result = addRoomMessage({
+    const result = await addRoomMessage({
       code: req.params.code,
       userId: user.id,
       username: user.username,

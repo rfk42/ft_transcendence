@@ -1,128 +1,238 @@
-const express = require("express")
-const multer = require("multer")
-const path = require("path")
-const fs = require("fs")
-const authenticate = require("../middleware/auth")
+const express = require("express");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const {Readable} = require("stream");
 
-const router = express.Router()
+const authenticate = require("../middleware/auth");
+const {
+  BLOB_ENABLED,
+  LOCAL_UPLOAD_DIR,
+  blobPathFromUrl,
+  deleteBlob,
+  ensureLocalDir,
+  fileBlobUrl,
+  getPrivateBlob,
+  listPrivateBlobs,
+  putPrivateBlob,
+  toBlobFilePath,
+  toSafeFilename,
+} = require("../storage");
 
-// Répertoire de base pour les fichiers uploadés
-const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "uploads")
-const FILES_DIR = path.join(UPLOAD_DIR, "files")
+const router = express.Router();
 
-// Crée le dossier files s'il n'existe pas
-fs.mkdirSync(FILES_DIR, { recursive: true })
+const UPLOAD_DIR = LOCAL_UPLOAD_DIR;
+const FILES_DIR = path.join(UPLOAD_DIR, "files");
 
-// Types autorisés : images + documents
+if (!BLOB_ENABLED) {
+  ensureLocalDir(FILES_DIR);
+}
+
 const ALLOWED_TYPES = [
-  "image/jpeg", "image/png", "image/webp", "image/gif",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
   "application/pdf",
   "text/plain",
   "application/msword",
-]
+];
 
-// Stockage avec nom unique : <userId>-<timestamp>-<originalname>
 const fileStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, FILES_DIR),
   filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_")
-    cb(null, `${req.userId}-${Date.now()}-${safeName}`)
+    const safeName = toSafeFilename(file.originalname);
+    cb(null, `${req.userId}-${Date.now()}-${safeName}`);
   },
-})
+});
 
 const fileUpload = multer({
-  storage: fileStorage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 Mo max
+  storage: BLOB_ENABLED ? multer.memoryStorage() : fileStorage,
+  limits: {fileSize: 10 * 1024 * 1024},
   fileFilter: (_req, file, cb) => {
     if (!ALLOWED_TYPES.includes(file.mimetype)) {
-      return cb(new Error("Unsupported file type"))
+      return cb(new Error("Unsupported file type"));
     }
-    cb(null, true)
+    cb(null, true);
   },
-})
+});
 
-// POST /upload — Upload un fichier (protégé par JWT)
 router.post("/", authenticate, (req, res) => {
-  fileUpload.single("file")(req, res, (err) => {
+  fileUpload.single("file")(req, res, async (err) => {
     if (err instanceof multer.MulterError) {
-      if (err.code === "LIMIT_FILE_SIZE")
-        return res.status(400).json({ error: "File too large (10 MB max)" })
-      return res.status(400).json({ error: err.message })
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({error: "File too large (10 MB max)"});
+      }
+      return res.status(400).json({error: err.message});
     }
-    if (err) return res.status(400).json({ error: err.message })
-    if (!req.file) return res.status(400).json({ error: "No file sent" })
+    if (err) return res.status(400).json({error: err.message});
+    if (!req.file) return res.status(400).json({error: "No file sent"});
 
-    res.status(201).json({
-      filename: req.file.filename,
-      originalName: req.file.originalname,
-      size: req.file.size,
-      mimetype: req.file.mimetype,
-      url: `/api/upload/files/${req.file.filename}`,
-    })
-  })
-})
+    try {
+      let filename;
+      let url;
 
-// GET /upload/files/:filename — Sert un fichier protégé (JWT requis)
+      if (BLOB_ENABLED) {
+        const blob = await putPrivateBlob(
+          toBlobFilePath(req.userId, req.file.originalname),
+          req.file.buffer,
+          req.file.mimetype,
+        );
+        filename = blob.pathname;
+        url = fileBlobUrl(blob.pathname);
+      } else {
+        filename = req.file.filename;
+        url = `/api/upload/files/${req.file.filename}`;
+      }
+
+      res.status(201).json({
+        filename,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        url,
+      });
+    } catch (uploadError) {
+      console.error("File upload error:", uploadError);
+      res.status(500).json({error: "Server error"});
+    }
+  });
+});
+
+router.get("/file", authenticate, async (req, res) => {
+  const pathname = String(req.query.pathname || "");
+
+  if (!pathname.startsWith(`files/${req.userId}/`)) {
+    return res.status(403).json({error: "Unauthorized access"});
+  }
+
+  if (!BLOB_ENABLED) {
+    return res.status(404).json({error: "File storage not enabled"});
+  }
+
+  try {
+    const blob = await getPrivateBlob(pathname, req.headers["if-none-match"]);
+
+    if (!blob?.body) {
+      return res.status(404).json({error: "File not found"});
+    }
+
+    if (blob.contentType) {
+      res.setHeader("Content-Type", blob.contentType);
+    }
+    if (blob.etag) {
+      res.setHeader("ETag", blob.etag);
+    }
+    res.setHeader("Cache-Control", blob.cacheControl || "private, max-age=60");
+
+    Readable.fromWeb(blob.body).pipe(res);
+  } catch (blobError) {
+    if (blobError?.status === 304) {
+      return res.status(304).end();
+    }
+    console.error("File download error:", blobError);
+    res.status(404).json({error: "File not found"});
+  }
+});
+
 router.get("/files/:filename", authenticate, (req, res) => {
-  const { filename } = req.params
+  if (BLOB_ENABLED) {
+    return res.status(400).json({error: "Use the file query endpoint"});
+  }
 
-  // Empêche la traversée de répertoire
-  const safeName = path.basename(filename)
-  const filePath = path.join(FILES_DIR, safeName)
+  const {filename} = req.params;
+  const safeName = path.basename(filename);
+  const filePath = path.join(FILES_DIR, safeName);
 
   if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "File not found" })
+    return res.status(404).json({error: "File not found"});
   }
 
-  // Verify that the file belongs to the user
   if (!safeName.startsWith(`${req.userId}-`)) {
-    return res.status(403).json({ error: "Unauthorized access" })
+    return res.status(403).json({error: "Unauthorized access"});
   }
 
-  res.sendFile(filePath)
-})
+  res.sendFile(filePath);
+});
 
-// DELETE /upload/files/:filename — Supprimer un fichier (JWT requis)
-router.delete("/files/:filename", authenticate, (req, res) => {
-  const { filename } = req.params
-  const safeName = path.basename(filename)
-  const filePath = path.join(FILES_DIR, safeName)
+router.delete("/file", authenticate, async (req, res) => {
+  if (!BLOB_ENABLED) {
+    return res.status(400).json({error: "Blob storage not enabled"});
+  }
+
+  const pathname = String(req.query.pathname || "");
+
+  if (!pathname.startsWith(`files/${req.userId}/`)) {
+    return res.status(403).json({error: "Unauthorized access"});
+  }
+
+  try {
+    await deleteBlob(pathname);
+    return res.json({message: "File deleted"});
+  } catch (blobError) {
+    console.error("File deletion error:", blobError);
+    return res.status(404).json({error: "File not found"});
+  }
+});
+
+router.delete("/files/:filename", authenticate, async (req, res) => {
+  if (BLOB_ENABLED) {
+    return res.status(400).json({error: "Use the file query endpoint"});
+  }
+
+  const {filename} = req.params;
+  const safeName = path.basename(filename);
+  const filePath = path.join(FILES_DIR, safeName);
 
   if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "File not found" })
+    return res.status(404).json({error: "File not found"});
   }
 
-  // Only the owner can delete
   if (!safeName.startsWith(`${req.userId}-`)) {
-    return res.status(403).json({ error: "Unauthorized access" })
+    return res.status(403).json({error: "Unauthorized access"});
   }
 
   fs.unlink(filePath, (err) => {
-    if (err) return res.status(500).json({ error: "Error during deletion" })
-    res.json({ message: "File deleted" })
-  })
-})
+    if (err) return res.status(500).json({error: "Error during deletion"});
+    res.json({message: "File deleted"});
+  });
+});
 
-// GET /upload/my-files — Liste les fichiers du user connecté
-router.get("/my-files", authenticate, (req, res) => {
+router.get("/my-files", authenticate, async (req, res) => {
   try {
-    const files = fs.readdirSync(FILES_DIR)
-      .filter((f) => f.startsWith(`${req.userId}-`))
-      .map((f) => {
-        const stat = fs.statSync(path.join(FILES_DIR, f))
+    if (BLOB_ENABLED) {
+      const {blobs} = await listPrivateBlobs(`files/${req.userId}/`);
+      const files = blobs
+        .map((blob) => ({
+          filename: blob.pathname,
+          size: blob.size,
+          url: fileBlobUrl(blob.pathname),
+          createdAt: blob.uploadedAt,
+        }))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      return res.json({files});
+    }
+
+    const files = fs
+      .readdirSync(FILES_DIR)
+      .filter((entry) => entry.startsWith(`${req.userId}-`))
+      .map((entry) => {
+        const stat = fs.statSync(path.join(FILES_DIR, entry));
         return {
-          filename: f,
+          filename: entry,
           size: stat.size,
-          url: `/api/upload/files/${f}`,
+          url: `/api/upload/files/${entry}`,
           createdAt: stat.birthtime,
-        }
+        };
       })
-      .sort((a, b) => b.createdAt - a.createdAt)
+      .sort((a, b) => b.createdAt - a.createdAt);
 
-    res.json({ files })
-  } catch {
-    res.status(500).json({ error: "Erreur serveur" })
+    return res.json({files});
+  } catch (listError) {
+    console.error("File listing error:", listError);
+    res.status(500).json({error: "Erreur serveur"});
   }
-})
+});
 
-module.exports = router
+module.exports = router;

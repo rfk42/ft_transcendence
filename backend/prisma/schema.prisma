@@ -74,6 +74,7 @@ model Game {
   // Relations
   players     GamePlayer[]
   matchHistory MatchHistory?
+  roomSession RoomSession?
 }
 
 // TABLE GAME_PLAYERS (qui joue dans quelle partie)
@@ -136,4 +137,26 @@ model MatchHistory {
   createdAt      DateTime @default(now())
   
   @@unique([gameId]) // une partie = un seul enregistrement dans match history
+}
+
+model RoomSession {
+  code          String   @id
+  playerCount   Int
+  activePlayers Json
+  players       Json
+  pawnsByPlayer Json
+  currentPlayer String
+  lastRoll      Int?
+  pendingRoll   Int?
+  winner        String?
+  status        String
+  statusMessage String
+  chatMessages  Json
+  totalMoves    Int      @default(0)
+  statsRecorded Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  startedAt     DateTime?
+  updatedAt     DateTime @updatedAt
+  gameId        String?  @unique
+  game          Game?    @relation(fields: [gameId], references: [id], onDelete: SetNull)
 }

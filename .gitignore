@@ -9,5 +9,7 @@ backend/node_modules/
 
 /generated/prisma
 backend/uploads/
+.vercel/
+frontend/dist/
 *.log
 .DS_Store

@@ -1,0 +1,19 @@
+{
+  "name": "ft-transcendence",
+  "private": true,
+  "engines": {
+    "node": "20.x"
+  },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace frontend",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "dev:backend": "npm run dev --workspace backend",
+    "prisma:generate": "npx prisma generate --schema backend/prisma/schema.prisma",
+    "prisma:push": "npx prisma db push --schema backend/prisma/schema.prisma",
+    "vercel-build": "npm run prisma:generate && npm run prisma:push && npm run build"
+  }
+}

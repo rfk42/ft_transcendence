@@ -4,20 +4,33 @@ const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const {Readable} = require("stream");
 const prisma = require("../db");
 const authenticate = require("../middleware/auth");
+const {
+  BLOB_ENABLED,
+  LOCAL_UPLOAD_DIR,
+  avatarBlobUrl,
+  blobPathFromUrl,
+  deleteBlob,
+  ensureLocalDir,
+  getPrivateBlob,
+  putPrivateBlob,
+  toBlobAvatarPath,
+} = require("../storage");
 
 const router = express.Router();
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://localhost:8443";
 
 //  Configuration Multer (upload avatar)
 // Répertoire de destination des fichiers uploadés (configurable via env)
-const UPLOAD_DIR =
-  process.env.UPLOAD_DIR || path.join(__dirname, "..", "..", "uploads");
+const UPLOAD_DIR = LOCAL_UPLOAD_DIR;
 const AVATAR_DIR = path.join(UPLOAD_DIR, "avatars");
 
 // Crée le dossier avatars s'il n'existe pas
-fs.mkdirSync(AVATAR_DIR, {recursive: true});
+if (!BLOB_ENABLED) {
+  ensureLocalDir(AVATAR_DIR);
+}
 
 // Nom du fichier = <userId>-<timestamp>.<ext> pour éviter les collisions
 const avatarStorage = multer.diskStorage({
@@ -29,7 +42,7 @@ const avatarStorage = multer.diskStorage({
 });
 
 const avatarUpload = multer({
-  storage: avatarStorage,
+  storage: BLOB_ENABLED ? multer.memoryStorage() : avatarStorage,
   limits: {fileSize: 5 * 1024 * 1024}, // 5 Mo max
   fileFilter: (_req, file, cb) => {
     const allowed = ["image/jpeg", "image/png", "image/webp"];
@@ -419,23 +432,40 @@ router.post("/me/avatar", authenticate, (req, res) => {
     if (!req.file) return res.status(400).json({error: "Aucun fichier envoyé"});
 
     try {
-      // Supprime l'ancien fichier avatar local s'il existe (pas les URLs OAuth externes)
       const current = await prisma.user.findUnique({where: {id: req.userId}});
-      if (current?.avatarUrl?.startsWith("/uploads/avatars/")) {
+
+      if (current?.avatarUrl?.startsWith("/api/auth/avatar?pathname=")) {
+        const oldBlobPath = blobPathFromUrl(current.avatarUrl);
+        if (oldBlobPath) {
+          await deleteBlob(oldBlobPath);
+        }
+      } else if (current?.avatarUrl?.startsWith("/uploads/avatars/")) {
         const oldPath = path.join(
           UPLOAD_DIR,
           current.avatarUrl.replace("/uploads/", ""),
         );
-        fs.unlink(oldPath, () => {}); // suppression
+        fs.unlink(oldPath, () => {});
       }
 
-      const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+      const avatarUrl = BLOB_ENABLED
+        ? avatarBlobUrl(
+            (
+              await putPrivateBlob(
+                toBlobAvatarPath(req.userId, req.file.originalname),
+                req.file.buffer,
+                req.file.mimetype,
+              )
+            ).pathname,
+          )
+        : `/uploads/avatars/${req.file.filename}`;
+
       const user = await prisma.user.update({
         where: {id: req.userId},
         data: {avatarUrl},
       });
       res.json({user: sanitizeUser(user)});
-    } catch {
+    } catch (uploadError) {
+      console.error("Avatar upload error:", uploadError);
       res.status(500).json({error: "Erreur serveur"});
     }
   });
@@ -447,8 +477,12 @@ router.delete("/me/avatar", authenticate, async (req, res) => {
     const user = await prisma.user.findUnique({where: {id: req.userId}});
     if (!user) return res.status(404).json({error: "Utilisateur introuvable"});
 
-    // Supprimer le fichier local si c'est un upload local (pas une URL OAuth)
-    if (user.avatarUrl?.startsWith("/uploads/avatars/")) {
+    if (user.avatarUrl?.startsWith("/api/auth/avatar?pathname=")) {
+      const blobPath = blobPathFromUrl(user.avatarUrl);
+      if (blobPath) {
+        await deleteBlob(blobPath);
+      }
+    } else if (user.avatarUrl?.startsWith("/uploads/avatars/")) {
       const filePath = path.join(
         UPLOAD_DIR,
         user.avatarUrl.replace("/uploads/", ""),
@@ -461,8 +495,48 @@ router.delete("/me/avatar", authenticate, async (req, res) => {
       data: {avatarUrl: null},
     });
     res.json({user: sanitizeUser(updated)});
-  } catch {
+  } catch (deleteError) {
+    console.error("Avatar delete error:", deleteError);
     res.status(500).json({error: "Erreur serveur"});
+  }
+});
+
+router.get("/avatar", async (req, res) => {
+  const pathname = String(req.query.pathname || "");
+
+  if (!pathname.startsWith("avatars/")) {
+    return res.status(400).json({error: "Invalid avatar path"});
+  }
+
+  if (!BLOB_ENABLED) {
+    return res.status(404).json({error: "Avatar storage not enabled"});
+  }
+
+  try {
+    const blob = await getPrivateBlob(pathname, req.headers["if-none-match"]);
+
+    if (!blob?.body) {
+      return res.status(404).json({error: "Avatar not found"});
+    }
+
+    if (blob.contentType) {
+      res.setHeader("Content-Type", blob.contentType);
+    }
+    res.setHeader(
+      "Cache-Control",
+      blob.cacheControl || "public, max-age=300, stale-while-revalidate=60",
+    );
+    if (blob.etag) {
+      res.setHeader("ETag", blob.etag);
+    }
+
+    Readable.fromWeb(blob.body).pipe(res);
+  } catch (blobError) {
+    if (blobError?.status === 304) {
+      return res.status(304).end();
+    }
+    console.error("Avatar fetch error:", blobError);
+    return res.status(404).json({error: "Avatar not found"});
   }
 });
 

@@ -136,6 +136,37 @@ Once the containers are ready, the application is available through Nginx:
 - HTTPS: `https://localhost:8443`
 - HTTP: `http://localhost:8080`
 
+## Vercel Deployment
+
+The repository is prepared for internet deployment on Vercel with:
+
+- static frontend build served from `frontend/dist`
+- one Express API entrypoint exposed through `api/index.js`
+- Prisma/PostgreSQL persistence
+- private blob-backed upload storage when `BLOB_READ_WRITE_TOKEN` is configured
+- database-backed multiplayer room state so rooms do not rely on process memory
+
+### Required Vercel Environment Variables
+
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `FRONTEND_URL`
+- `ALLOWED_ORIGINS`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REDIRECT_URI`
+- `FT_CLIENT_ID`
+- `FT_CLIENT_SECRET`
+- `FT_REDIRECT_URI`
+- `BLOB_READ_WRITE_TOKEN`
+
+### Deployment Notes
+
+- The root `vercel.json` config builds the Vite frontend and routes `/api/*` to the Express backend.
+- The root `vercel-build` script runs `prisma generate`, `prisma db push`, and the frontend production build.
+- Avatar and file uploads use durable storage through Vercel Blob in production.
+- Multiplayer rooms are persisted in PostgreSQL and no longer depend on in-memory state.
+
 ## Architecture Components
 
 The project contains the three required parts:
