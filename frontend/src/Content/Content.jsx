@@ -23,7 +23,6 @@ const Content = () => (
         }
       />
       <Route path="/play" element={<PlayMode />} />
-      <Route path="/play/solo" element={<GameBoard mode="solo" />} />
       <Route path="/play/ai" element={<GameBoard mode="ai" />} />
       <Route path="/play/multi/:code" element={<GameBoard mode="multi" />} />
       {/*<Route path="/room" element={<Room />} />*/}

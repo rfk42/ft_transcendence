@@ -33,6 +33,7 @@ const STEP_ANIMATION_MS = 170
 const ROOM_POLL_MS = 1500
 const DICE_ROLL_MIN_MS = 650
 const AI_TURN_DELAY_MS = 700
+const AI_ACTIVE_PLAYERS = ['blue', 'green']
 
 const DICE_ICONS = {
   1: DiceOne,
@@ -250,6 +251,7 @@ const GameBoard = ({ mode = 'solo' }) => {
   const animationRunRef = useRef(0)
   const roomBusyRef = useRef(false)
   const isRollingDiceRef = useRef(false)
+  const aiTurnInFlightRef = useRef(false)
   const [playing, setPlaying] = useState(false)
   const [boardReady, setBoardReady] = useState(false)
   const [playerCount, setPlayerCount] = useState(4)
@@ -281,7 +283,7 @@ const GameBoard = ({ mode = 'solo' }) => {
   const activePlayers = isMultiplayer
     ? (roomState?.activePlayers ?? [])
     : isComputerGame
-      ? ['blue', 'green']
+      ? AI_ACTIVE_PLAYERS
       : getPlayersForCount(playerCount)
   const visiblePawnsByPlayer = animatedPawnsByPlayer ?? pawnsByPlayer
   const displayPawnsByPlayer = isMultiplayer
@@ -406,7 +408,15 @@ const GameBoard = ({ mode = 'solo' }) => {
   }, [createGameInDB, isComputerGame, isMultiplayer, playerCount, user])
 
   useEffect(() => {
-    if (!isComputerGame || winner || pendingRoll !== null || animatingPawnId || !boardReady) {
+    if (
+      !isComputerGame ||
+      winner ||
+      pendingRoll !== null ||
+      animatingPawnId ||
+      !boardReady ||
+      isRollingDice ||
+      aiTurnInFlightRef.current
+    ) {
       return undefined
     }
 
@@ -417,43 +427,58 @@ const GameBoard = ({ mode = 'solo' }) => {
     let cancelled = false
 
     const playComputerTurn = async () => {
-      await wait(AI_TURN_DELAY_MS)
-      if (cancelled || currentPlayer !== 'green') {
-        return
-      }
+      aiTurnInFlightRef.current = true
 
-      const diceValue = Math.floor(Math.random() * 6) + 1
-      const startedAt = startDiceRolling()
-      await stopDiceRolling(diceValue, startedAt)
+      try {
+        await wait(AI_TURN_DELAY_MS)
+        if (cancelled || currentPlayer !== 'green') {
+          return
+        }
 
-      if (cancelled) {
-        return
-      }
+        const diceValue = Math.floor(Math.random() * 6) + 1
+        const startedAt = startDiceRolling()
+        await stopDiceRolling(diceValue, startedAt)
 
-      const nextMovable = getMovablePawnIds(pawnsByPlayer, currentPlayer, diceValue)
-      setLastRoll(diceValue)
+        if (cancelled) {
+          return
+        }
 
-      if (nextMovable.length === 0) {
-        const nextPlayer = getNextPlayer(currentPlayer, activePlayers)
-        setStatusMessage(
-          `${PLAYER_LABELS[currentPlayer]} rolled ${diceValue}, but no pawn can move.`,
+        const nextMovable = getMovablePawnIds(
+          pawnsByPlayer,
+          currentPlayer,
+          diceValue,
         )
-        setCurrentPlayer(nextPlayer)
-        return
+        setLastRoll(diceValue)
+
+        if (nextMovable.length === 0) {
+          const nextPlayer = getNextPlayer(currentPlayer, activePlayers)
+          setStatusMessage(
+            `${PLAYER_LABELS[currentPlayer]} rolled ${diceValue}, but no pawn can move.`,
+          )
+          setCurrentPlayer(nextPlayer)
+          return
+        }
+
+        const pawnId =
+          nextMovable.length === 1
+            ? nextMovable[0]
+            : pickComputerPawn(
+                pawnsByPlayer,
+                currentPlayer,
+                diceValue,
+                activePlayers,
+              )
+
+        if (!pawnId) {
+          const nextPlayer = getNextPlayer(currentPlayer, activePlayers)
+          setCurrentPlayer(nextPlayer)
+          return
+        }
+
+        await playPawn(pawnId, diceValue)
+      } finally {
+        aiTurnInFlightRef.current = false
       }
-
-      const pawnId =
-        nextMovable.length === 1
-          ? nextMovable[0]
-          : pickComputerPawn(pawnsByPlayer, currentPlayer, diceValue, activePlayers)
-
-      if (!pawnId) {
-        const nextPlayer = getNextPlayer(currentPlayer, activePlayers)
-        setCurrentPlayer(nextPlayer)
-        return
-      }
-
-      await playPawn(pawnId, diceValue)
     }
 
     void playComputerTurn()
@@ -467,6 +492,7 @@ const GameBoard = ({ mode = 'solo' }) => {
     boardReady,
     currentPlayer,
     isComputerGame,
+    isRollingDice,
     pawnsByPlayer,
     pendingRoll,
     winner,

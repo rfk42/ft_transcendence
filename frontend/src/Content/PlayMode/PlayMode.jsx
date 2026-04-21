@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import { useAuth } from '../../contexts/AuthContext'
 import './PlayMode.scss'
 
@@ -85,19 +85,17 @@ const PlayMode = () => {
   return (
     <section className="play-mode">
       <h1>Play Ludo</h1>
-      <p>Choose a local challenge, face the computer, or create a multiplayer room.</p>
+      <p>Face the computer instantly or create a multiplayer room.</p>
 
-      <div className="play-mode_card">
-        <h2>Solo modes</h2>
-
-        <div className="play-mode_actions">
-          <Link to="/play/solo" className="play-mode_button">
-            Local practice
-          </Link>
-          <Link to="/play/ai" className="play-mode_button">
-            Vs computer
-          </Link>
-        </div>
+      <div className="play-mode_actions">
+        <button
+          type="button"
+          className="play-mode_button play-mode_button--active"
+          onClick={() => navigate('/play/ai')}
+          disabled={busy}
+        >
+          Vs computer
+        </button>
       </div>
 
       <div className="play-mode_card">
