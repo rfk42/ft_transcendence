@@ -29,6 +29,7 @@ function hydrateRoom(room) {
 
 function serializeRoom(room) {
   return {
+    code: room.code,
     playerCount: room.playerCount,
     activePlayers: room.activePlayers,
     players: room.players,

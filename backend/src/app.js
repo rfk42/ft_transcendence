@@ -32,7 +32,7 @@ function parseAllowedOrigins() {
 
 const allowedOrigins = new Set(parseAllowedOrigins());
 
-app.set("trust proxy", true);
+app.set("trust proxy", 1);
 
 app.use((req, res, next) => {
   res.setHeader("X-Frame-Options", "DENY");
