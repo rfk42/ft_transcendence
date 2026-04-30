@@ -4,6 +4,8 @@ ft_transcendence is a full-stack web adaptation of Ludo developed as a 42 school
 The application combines a custom browser-based board game, authentication, profiles,
 friends, avatars, statistics, leaderboards, Docker deployment and multiplayer gameplay.
 
+Now deployed at : https://fttranscendence-six.vercel.app
+
 ## Project Description
 
 The goal of the project is to deliver a complete web application with:
